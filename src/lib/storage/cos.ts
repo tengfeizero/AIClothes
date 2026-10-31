@@ -5,12 +5,50 @@ import {
   saveUploadedFile as saveLocalUploadedFile,
   saveResultFile as saveLocalResultFile,
 } from './local';
+import { isAliyunOssConfigured, putObjectToAliyunOss } from './aliyun-oss';
 
 const SECRET_ID = process.env.TENCENT_SECRET_ID || '';
 const SECRET_KEY = process.env.TENCENT_SECRET_KEY || '';
 const COS_BUCKET = process.env.TENCENT_COS_BUCKET || '';
 const COS_REGION = process.env.TENCENT_COS_REGION || 'ap-guangzhou';
 const COS_PUBLIC_URL = process.env.TENCENT_COS_PUBLIC_URL || '';
+
+/** 对象存储提供方：aliyun（阿里云 OSS）| tencent（腾讯云 COS） */
+const OSS_PROVIDER = (process.env.STORAGE_PROVIDER || process.env.OSS_PROVIDER || 'tencent')
+  .trim()
+  .toLowerCase();
+
+function useAliyunOss(): boolean {
+  if (OSS_PROVIDER === 'aliyun') {
+    if (!isAliyunOssConfigured()) {
+      throw new Error(
+        'OSS_PROVIDER=aliyun but Aliyun OSS is not configured. Please set ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_ACCESS_KEY_SECRET, ALIYUN_OSS_BUCKET in .env.local'
+      );
+    }
+    return true;
+  }
+  return false;
+}
+
+async function uploadToRemote(key: string, buffer: Buffer, contentType: string): Promise<string> {
+  if (useAliyunOss()) {
+    return putObjectToAliyunOss(key, buffer, contentType);
+  }
+
+  const cos = getCos();
+  await cos.putObject({
+    Bucket: COS_BUCKET,
+    Region: COS_REGION,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+    ACL: 'public-read',
+  });
+
+  return COS_PUBLIC_URL
+    ? `${COS_PUBLIC_URL}/${key}`
+    : `https://${COS_BUCKET}.cos.${COS_REGION}.myqcloud.com/${key}`;
+}
 
 export interface SaveFileOptions {
   type: 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
@@ -88,26 +126,17 @@ export async function saveUploadedFile(options: SaveFileOptions): Promise<SavedF
     };
   }
 
-  // 用户上传的素材：先落本地（缓存），再同步到 COS（提供公网 URL 给 AI 厂商）
+  // 用户上传的素材：先落本地（缓存），再同步到对象存储（提供公网 URL 给 AI 厂商）
   const id = generateId();
   const ext = getFileExt(filename);
+  const key = `uploads/${type}/${id}${ext}`;
+  const fileContentType = contentType || getContentType(filename);
 
-  // 1. 先写本地，文件名与 COS 保持一致（同 id）
+  // 1. 先写本地，文件名与对象存储保持一致（同 id）
   await saveLocalUploadedFile({ type, filename, buffer, id });
 
-  // 2. 再同步到 COS
-  const cos = getCos();
-  const key = `uploads/${type}/${id}${ext}`;
-  await cos.putObject({
-    Bucket: COS_BUCKET,
-    Region: COS_REGION,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType || getContentType(filename),
-    ACL: 'public-read',
-  });
-
-  const url = COS_PUBLIC_URL ? `${COS_PUBLIC_URL}/${key}` : `https://${COS_BUCKET}.cos.${COS_REGION}.myqcloud.com/${key}`;
+  // 2. 再同步到对象存储（阿里云 OSS / 腾讯云 COS，由 OSS_PROVIDER 决定）
+  const url = await uploadToRemote(key, buffer, fileContentType);
 
   return {
     id,
