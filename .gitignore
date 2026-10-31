@@ -42,3 +42,6 @@ next-env.d.ts
 !/public/uploads/cache/
 /public/uploads/results/*
 /public/uploads/cache/*
+
+/clone-ai-costume-gallery/
+/clone-ai-pose-gallery/
