@@ -7,6 +7,8 @@ export interface SaveFileOptions {
   type: 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
   filename: string;
   buffer: Buffer;
+  /** 可选：指定文件 id（用于与 COS 同步时保持文件名一致） */
+  id?: string;
 }
 
 export interface SavedFile {
@@ -17,12 +19,12 @@ export interface SavedFile {
 }
 
 export async function saveUploadedFile(options: SaveFileOptions): Promise<SavedFile> {
-  const { type, filename, buffer } = options;
+  const { type, filename, buffer, id: providedId } = options;
   const uploadDir = getUploadDir();
   const targetDir = path.join(uploadDir, type);
   await ensureDir(targetDir);
 
-  const id = generateId();
+  const id = providedId || generateId();
   const ext = getFileExt(filename);
   const savedFilename = `${id}${ext}`;
   const absolutePath = path.join(targetDir, savedFilename);

@@ -88,12 +88,16 @@ export async function saveUploadedFile(options: SaveFileOptions): Promise<SavedF
     };
   }
 
-  const cos = getCos();
-
+  // 用户上传的素材：先落本地（缓存），再同步到 COS（提供公网 URL 给 AI 厂商）
   const id = generateId();
   const ext = getFileExt(filename);
-  const key = `uploads/${type}/${id}${ext}`;
 
+  // 1. 先写本地，文件名与 COS 保持一致（同 id）
+  await saveLocalUploadedFile({ type, filename, buffer, id });
+
+  // 2. 再同步到 COS
+  const cos = getCos();
+  const key = `uploads/${type}/${id}${ext}`;
   await cos.putObject({
     Bucket: COS_BUCKET,
     Region: COS_REGION,
