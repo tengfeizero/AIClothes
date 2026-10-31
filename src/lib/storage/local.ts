@@ -4,7 +4,7 @@ import { ensureDir, getUploadDir, getPublicUrl, getFileExt } from '../utils/file
 import { generateId } from '../utils/id';
 
 export interface SaveFileOptions {
-  type: 'garment' | 'model' | 'pose' | 'background' | 'results';
+  type: 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
   filename: string;
   buffer: Buffer;
 }

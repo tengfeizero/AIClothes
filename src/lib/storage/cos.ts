@@ -1,6 +1,10 @@
 // @ts-ignore - cos-nodejs-sdk-v5 is CommonJS
 import COS = require('cos-nodejs-sdk-v5');
 import { generateId } from '../utils/id';
+import {
+  saveUploadedFile as saveLocalUploadedFile,
+  saveResultFile as saveLocalResultFile,
+} from './local';
 
 const SECRET_ID = process.env.TENCENT_SECRET_ID || '';
 const SECRET_KEY = process.env.TENCENT_SECRET_KEY || '';
@@ -17,10 +21,19 @@ export interface SaveFileOptions {
 
 export interface SavedFile {
   id: string;
+  /** COS 对象键（仅上传到 COS 的文件才有；本地文件为空字符串） */
   key: string;
   publicPath: string;
   url: string;
 }
+
+/**
+ * 生成结果类型：这些是 AI 生成的产物（图片/3D 模型），无需上传到 COS，
+ * 直接落本地 public/uploads/ 即可。
+ * 其余类型（garment/model/pose/background/accessories/shoes）是用户上传的素材，
+ * 必须上传 COS 提供公网 URL，供 AI 厂商读取输入图。
+ */
+const LOCAL_RESULT_TYPES = new Set<string>(['results', 'model3d']);
 
 let cosInstance: COS | null = null;
 
@@ -59,6 +72,22 @@ function getContentType(filename: string): string {
 
 export async function saveUploadedFile(options: SaveFileOptions): Promise<SavedFile> {
   const { type, filename, buffer, contentType } = options;
+
+  // AI 生成的产物（results/model3d）落本地，不上传 COS
+  if (LOCAL_RESULT_TYPES.has(type)) {
+    const local = await saveLocalUploadedFile({
+      type: type as 'results' | 'model3d',
+      filename,
+      buffer,
+    });
+    return {
+      id: local.id,
+      key: '',
+      publicPath: local.publicPath,
+      url: local.url,
+    };
+  }
+
   const cos = getCos();
 
   const id = generateId();
@@ -85,12 +114,14 @@ export async function saveUploadedFile(options: SaveFileOptions): Promise<SavedF
 }
 
 export async function saveResultFile(buffer: Buffer, ext: string = '.jpg'): Promise<SavedFile> {
-  return saveUploadedFile({
-    type: 'results',
-    filename: `result${ext}`,
-    buffer,
-    contentType: ext === '.png' ? 'image/png' : 'image/jpeg',
-  });
+  // 生成结果直接存本地
+  const local = await saveLocalResultFile(buffer, ext);
+  return {
+    id: local.id,
+    key: '',
+    publicPath: local.publicPath,
+    url: local.url,
+  };
 }
 
 export async function downloadImageAsBuffer(url: string): Promise<Buffer> {
