@@ -44,6 +44,11 @@ export async function putObjectToAliyunOss(
     mime: contentType,
   });
 
+  return getAliyunOssPublicUrl(key);
+}
+
+/** 根据对象键生成 OSS 公网访问地址 */
+export function getAliyunOssPublicUrl(key: string): string {
   if (PUBLIC_URL) {
     return `${PUBLIC_URL.replace(/\/$/, '')}/${key}`;
   }

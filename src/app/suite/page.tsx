@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Info, Loader2, CheckCircle2 } from 'lucide-react';
+import { Package, Info, Loader2, CheckCircle2, Images, X } from 'lucide-react';
 import Image from 'next/image';
-import { ImageUpload } from '@/components/upload/image-upload';
 import { TaskStatus } from '@/components/task-status/task-status';
 import { cacheImageUrl } from '@/lib/utils';
+import { getMaterialSourceUrl } from '@/lib/storage/material-types';
+import { AssetPicker } from '@/components/assets/asset-picker';
+import { SectionTitle } from '@/components/ui/section-title';
 import type { GenerationPlan } from '@/types';
 
 export default function SuitePage() {
@@ -20,6 +22,7 @@ export default function SuitePage() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resultImages, setResultImages] = useState<string[]>([]);
+  const [showAssetPicker, setShowAssetPicker] = useState(false);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -75,7 +78,7 @@ export default function SuitePage() {
         {/* 生成方案 */}
         {plans.length > 0 && (
           <div className="mb-5">
-            <div className="text-[13px] font-medium text-gray-700 mb-2">生成方案</div>
+            <SectionTitle>生成方案</SectionTitle>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {plans.map((p) => (
                 <button
@@ -98,21 +101,46 @@ export default function SuitePage() {
           </div>
         )}
 
-        {/* 商品图上传 */}
+        {/* 商品图（从素材中心选择） */}
         <div className="mb-5">
-          <ImageUpload
-            label="商品图（必填）"
-            description="建议上传白底商品平铺图，主体清晰、仅含一个商品"
-            type="garment"
-            value={garmentPath}
-            onChange={(path) => setGarmentPath(path)}
-            compact
-          />
+          <div className="flex items-center justify-between mb-2">
+            <SectionTitle className="">商品图（必填）</SectionTitle>
+            <span className="text-[11px] text-gray-400">{garmentPath ? '1/1' : '0/1'}</span>
+          </div>
+
+          {garmentPath ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
+                <Image src={cacheImageUrl(garmentPath)} alt="商品图" fill className="object-contain" unoptimized />
+                <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded-full text-[10px] text-white">
+                  商品图
+                </div>
+                <button
+                  onClick={() => setGarmentPath(null)}
+                  className="absolute top-2 right-2 p-1 bg-white/90 rounded-full shadow-sm hover:bg-white"
+                >
+                  <X className="w-3 h-3 text-gray-500" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAssetPicker(true)}
+              className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-400 bg-gray-50 hover:bg-blue-50 transition-colors"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <Images className="w-6 h-6 text-gray-400" />
+                <span className="text-[12px] text-gray-500">从素材中心选择商品图</span>
+                <span className="text-[11px] text-gray-400">建议选白底平铺图，主体清晰、仅含一个商品</span>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* 高级选项 */}
         <div className="mb-5">
-          <div className="text-[13px] font-medium text-gray-700 mb-3">高级选项（选填）</div>
+          <SectionTitle>高级选项（选填）</SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label className="text-[12px] font-medium text-gray-700">海报比例</label>
@@ -228,6 +256,17 @@ export default function SuitePage() {
           </div>
         )}
       </div>
+
+      <AssetPicker
+        open={showAssetPicker}
+        maxCount={1}
+        title="从素材中心选择商品图"
+        onClose={() => setShowAssetPicker(false)}
+        onConfirm={(items) => {
+          if (items[0]) setGarmentPath(getMaterialSourceUrl(items[0]));
+          setShowAssetPicker(false);
+        }}
+      />
     </div>
   );
 }

@@ -75,3 +75,16 @@ export interface MaterialItem {
 export function isMaterialType(value: string | null | undefined): value is MaterialType {
   return Boolean(value) && MATERIAL_TYPES.includes(value as MaterialType);
 }
+
+/** 素材唯一标识（类型 + 文件名） */
+export function materialKey(item: Pick<MaterialItem, 'type' | 'filename'>): string {
+  return `${item.type}/${item.filename}`;
+}
+
+/**
+ * 素材用于生成接口的地址：已同步到对象存储用本地路径（后端按存储提供方拼公网地址），
+ * 未同步的图库素材优先用原图外链。
+ */
+export function getMaterialSourceUrl(item: MaterialItem): string {
+  return item.synced || !item.remoteUrl ? item.localPath : item.remoteUrl;
+}

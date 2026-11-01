@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { downloadImageAsBuffer } from '@/lib/storage/cos';
+import { downloadImageAsBuffer, getRemotePublicUrl } from '@/lib/storage/cos';
 import type { GarmentCategory } from '@/types';
 
 const TARGET_WIDTH = 400;
@@ -19,10 +19,10 @@ function resolveImageUrl(imagePath: string): string {
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
   }
-  // 相对路径（旧数据格式 /uploads/xxx）：拼接COS公网地址
-  const cosUrl = process.env.TENCENT_COS_PUBLIC_URL;
-  if (cosUrl && (imagePath.startsWith('/uploads/') || imagePath.startsWith('uploads/'))) {
-    return `${cosUrl}/${imagePath.replace(/^\//, '')}`;
+  // 相对路径（旧数据格式 /uploads/xxx）：按当前存储提供方拼接公网地址
+  if (imagePath.startsWith('/uploads/') || imagePath.startsWith('uploads/')) {
+    const remoteUrl = getRemotePublicUrl(imagePath);
+    if (remoteUrl) return remoteUrl;
   }
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${appUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;

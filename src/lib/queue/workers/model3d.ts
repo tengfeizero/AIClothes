@@ -1,7 +1,7 @@
 import { submitHunyuanTo3DProJob, queryHunyuanTo3DProJob, type HunyuanTo3DFile } from '@/lib/ai/tencent3d';
 import { updateTask } from '../task-store';
 import { recordImageGenerationForTask } from '@/lib/db/image-generation-store';
-import { downloadImageAsBuffer, saveUploadedFile } from '@/lib/storage/cos';
+import { downloadImageAsBuffer, saveUploadedFile, getRemotePublicUrl } from '@/lib/storage/cos';
 import type { TaskRecord } from '@/types';
 
 const POLL_INTERVAL_MS = 5000;
@@ -14,9 +14,9 @@ function resolveUrl(imagePath: string): string {
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
   }
-  const cosUrl = process.env.TENCENT_COS_PUBLIC_URL;
-  if (cosUrl && (imagePath.startsWith('/uploads/') || imagePath.startsWith('uploads/'))) {
-    return `${cosUrl}/${imagePath.replace(/^\//, '')}`;
+  if (imagePath.startsWith('/uploads/') || imagePath.startsWith('uploads/')) {
+    const remoteUrl = getRemotePublicUrl(imagePath);
+    if (remoteUrl) return remoteUrl;
   }
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${appUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;

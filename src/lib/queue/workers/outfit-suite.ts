@@ -3,7 +3,7 @@ import { createPosterSuiteTask, queryTaskResult } from '@/lib/ai/tencent';
 import { getTask, updateTask } from '../task-store';
 import { recordGenerationForTask } from '@/lib/db/generation-store';
 import { recordImageGenerationForTask } from '@/lib/db/image-generation-store';
-import { downloadImageAsBuffer, saveResultFile } from '@/lib/storage/cos';
+import { downloadImageAsBuffer, saveResultFile, getRemotePublicUrl } from '@/lib/storage/cos';
 import type { TaskRecord } from '@/types';
 
 const POLL_INTERVAL_MS = 3000;
@@ -13,10 +13,10 @@ function resolveUrl(imagePath: string): string {
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
   }
-  // 相对路径（旧数据格式 /uploads/xxx）：拼接COS公网地址，确保腾讯云可访问
-  const cosUrl = process.env.TENCENT_COS_PUBLIC_URL;
-  if (cosUrl && (imagePath.startsWith('/uploads/') || imagePath.startsWith('uploads/'))) {
-    return `${cosUrl}/${imagePath.replace(/^\//, '')}`;
+  // 相对路径（旧数据格式 /uploads/xxx）：按当前存储提供方拼接公网地址，确保厂商可访问
+  if (imagePath.startsWith('/uploads/') || imagePath.startsWith('uploads/')) {
+    const remoteUrl = getRemotePublicUrl(imagePath);
+    if (remoteUrl) return remoteUrl;
   }
   // 兜底：拼接APP_URL（本地开发场景）
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';

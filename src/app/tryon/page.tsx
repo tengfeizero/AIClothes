@@ -1,18 +1,13 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Wand2, Info, User, Star, Plus, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { Wand2, Info, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
-import { ImageUpload } from '@/components/upload/image-upload';
+import { AssetSelect } from '@/components/assets/asset-select';
+import { SectionTitle } from '@/components/ui/section-title';
 import { TaskStatus } from '@/components/task-status/task-status';
 import { cacheImageUrl } from '@/lib/utils';
-import type { Model, GenerationPlan } from '@/types';
-
-interface ModelsResponse {
-  models: Model[];
-  defaultModel: Model | null;
-}
+import type { GenerationPlan } from '@/types';
 
 export default function TryonPage() {
   const [garmentPath, setGarmentPath] = useState<string | null>(null);
@@ -27,27 +22,7 @@ export default function TryonPage() {
   const [selectedPlanId, setSelectedPlanId] = useState('volcengine-jimeng-tryon');
   const [outputResolution, setOutputResolution] = useState<string>('2048x2048');
 
-  const [modelSource, setModelSource] = useState<'saved' | 'upload'>('saved');
-  const [models, setModels] = useState<Model[]>([]);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [uploadedModelPath, setUploadedModelPath] = useState<string | null>(null);
-  const [modelsLoading, setModelsLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/model')
-      .then((res) => res.ok ? res.json() : { models: [], defaultModel: null })
-      .then((data: ModelsResponse) => {
-        setModels(data.models || []);
-        if (data.defaultModel) {
-          setSelectedModelId(data.defaultModel.id);
-          setModelSource('saved');
-        } else if ((data.models || []).length === 0) {
-          setModelSource('upload');
-        }
-      })
-      .catch(() => setModelSource('upload'))
-      .finally(() => setModelsLoading(false));
-  }, []);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -76,17 +51,8 @@ export default function TryonPage() {
   }, [selectedPlan?.id]);
 
   const handleSubmit = useCallback(async () => {
-    if (!garmentPath) { alert('请上传服装图'); return; }
-
-    let modelParam: { modelId?: string; modelImagePath?: string };
-    if (modelSource === 'saved' && selectedModelId) {
-      modelParam = { modelId: selectedModelId };
-    } else if (modelSource === 'upload' && uploadedModelPath) {
-      modelParam = { modelImagePath: uploadedModelPath };
-    } else {
-      alert('请选择模特或上传模特图');
-      return;
-    }
+    if (!garmentPath) { alert('请选择服装图'); return; }
+    if (!uploadedModelPath) { alert('请选择模特图'); return; }
 
     setSubmitting(true);
     setResultImages([]);
@@ -97,7 +63,7 @@ export default function TryonPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           garmentImagePath: garmentPath,
-          ...modelParam,
+          modelImagePath: uploadedModelPath,
           poseImagePath: posePath || undefined,
           backgroundPrompt: backgroundPrompt || undefined,
           view: 'front',
@@ -117,12 +83,9 @@ export default function TryonPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [garmentPath, modelSource, selectedModelId, uploadedModelPath, posePath, backgroundPrompt, selectedPlanId, selectedPlan, clothesType, outputResolution]);
+  }, [garmentPath, uploadedModelPath, posePath, backgroundPrompt, selectedPlanId, selectedPlan, clothesType, outputResolution]);
 
-  const canSubmit = garmentPath && !submitting && !taskId && (
-    (modelSource === 'saved' && selectedModelId) ||
-    (modelSource === 'upload' && uploadedModelPath)
-  );
+  const canSubmit = garmentPath && uploadedModelPath && !submitting && !taskId;
 
   return (
     <div className="min-h-screen bg-white">
@@ -130,7 +93,7 @@ export default function TryonPage() {
         {/* 生成方案 */}
         {plans.length > 0 && (
           <div className="mb-5">
-            <div className="text-[13px] font-medium text-gray-700 mb-2">生成方案</div>
+            <SectionTitle>选择模型</SectionTitle>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {plans.map((p) => (
                 <button
@@ -154,7 +117,7 @@ export default function TryonPage() {
             {/* 分辨率 */}
             {selectedPlan?.resolutionOptions && selectedPlan.resolutionOptions.length > 0 && (
               <div className="mt-3">
-                <div className="text-[11px] font-medium text-gray-500 mb-1.5">输出分辨率</div>
+                <div className="text-[12px] font-medium text-gray-700 mb-1.5">输出分辨率</div>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedPlan.resolutionOptions.map((r, idx) => {
                     const value = r.width === 0 ? 'original' : `${r.width}x${r.height}`;
@@ -206,130 +169,43 @@ export default function TryonPage() {
           </div>
         )}
 
-        {/* 服装上传 */}
+        {/* 服装选择 */}
         <div className="mb-5">
-          <ImageUpload
+          <AssetSelect
             label="服装平铺图（必填）"
             description="建议背景简洁，服装完整呈现"
-            type="garment"
             value={garmentPath}
-            onChange={(path) => setGarmentPath(path)}
-            compact
+            onChange={setGarmentPath}
+            pickerTitle="从素材中心选择服装图"
+            placeholder="从素材中心选择服装图"
           />
         </div>
 
         {/* 模特选择 */}
         <div className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[13px] font-medium text-gray-700">模特选择</span>
-            <div className="flex gap-0.5 bg-gray-100 p-0.5 rounded-lg">
-              <button
-                type="button"
-                onClick={() => setModelSource('saved')}
-                disabled={models.length === 0}
-                className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
-                  modelSource === 'saved'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 disabled:opacity-40'
-                }`}
-              >
-                我的模特
-              </button>
-              <button
-                type="button"
-                onClick={() => setModelSource('upload')}
-                className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
-                  modelSource === 'upload'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                上传模特图
-              </button>
-            </div>
-          </div>
-
-          {modelSource === 'saved' ? (
-            modelsLoading ? (
-              <div className="text-center py-8 text-gray-400 text-[13px]">加载模特...</div>
-            ) : models.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <User className="w-5 h-5 text-purple-400" />
-                </div>
-                <p className="text-[13px] text-gray-500 mb-2">还没有定制模特</p>
-                <Link
-                  href="/assets"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" /> 去素材中心上传模特
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                {models.map((model) => (
-                  <button
-                    key={model.id}
-                    type="button"
-                    onClick={() => setSelectedModelId(model.id)}
-                    className={`relative rounded-xl overflow-hidden border-2 aspect-square transition-all ${
-                      selectedModelId === model.id
-                        ? 'border-blue-500 ring-2 ring-blue-100'
-                        : 'border-transparent hover:border-gray-300'
-                    }`}
-                  >
-                    <img src={cacheImageUrl(model.identity_image_path)} alt={model.name} className="w-full h-full object-cover" />
-                    {model.is_default && (
-                      <div className="absolute top-1 left-1 p-0.5 bg-yellow-500 rounded-full">
-                        <Star className="w-2 h-2 text-white" />
-                      </div>
-                    )}
-                    {selectedModelId === model.id && (
-                      <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1">
-                      <p className="text-[10px] text-white font-medium truncate">{model.name}</p>
-                    </div>
-                  </button>
-                ))}
-                <Link
-                  href="/assets"
-                  className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 aspect-square text-gray-400 hover:text-purple-500 hover:border-purple-300 transition-colors"
-                >
-                  <Plus className="w-5 h-5 mb-0.5" />
-                  <span className="text-[10px]">添加</span>
-                </Link>
-              </div>
-            )
-          ) : (
-            <ImageUpload
-              label="模特参考图"
-              description="建议单人正面照，背景简洁"
-              type="model"
-              value={uploadedModelPath}
-              onChange={(path) => setUploadedModelPath(path)}
-              compact
-            />
-          )}
+          <AssetSelect
+            label="模特图（必填）"
+            description="选择已保存的模特或素材中心里的模特图"
+            value={uploadedModelPath}
+            onChange={setUploadedModelPath}
+            defaultType="model"
+            pickerTitle="从素材中心选择模特图"
+            placeholder="从素材中心选择模特图"
+          />
         </div>
 
         {/* 高级选项 */}
         <div className="mb-5">
-          <div className="text-[13px] font-medium text-gray-700 mb-3">高级选项（选填）</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ImageUpload
+          <SectionTitle>高级选项（选填）</SectionTitle>
+          <div className="flex flex-col gap-4">
+            <AssetSelect
               label="姿势参考图"
               description="指定模特姿势动作"
-              type="pose"
               value={posePath}
-              onChange={(path) => setPosePath(path)}
-              compact
+              onChange={setPosePath}
+              defaultType="pose"
+              pickerTitle="从素材中心选择姿势图"
+              placeholder="从素材中心选择姿势图"
             />
             <div className="space-y-1.5">
               <label className="text-[12px] font-medium text-gray-700">场景描述</label>
@@ -337,7 +213,7 @@ export default function TryonPage() {
                 value={backgroundPrompt}
                 onChange={(e) => setBackgroundPrompt(e.target.value)}
                 placeholder="例如：在明亮的工作室里，自然光"
-                className="w-full h-[calc(100%-22px)] px-3 py-2 border border-gray-200 rounded-xl text-[13px] resize-none focus:outline-none focus:border-blue-400"
+                className="w-full h-24 px-3 py-2 border border-gray-200 rounded-xl text-[13px] resize-none focus:outline-none focus:border-blue-400"
               />
             </div>
           </div>
@@ -347,7 +223,7 @@ export default function TryonPage() {
         <div className="mb-4 p-3 bg-blue-50 rounded-xl flex items-start gap-2">
           <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-blue-700 leading-relaxed">
-            选择"我的模特"可使用已保存的数字人形象，换装结果会保留人物特征。提交后可在任务中心查看进度。
+            素材中心里的模特都可直接选择，换装结果会保留人物特征。提交后可在任务中心查看进度。
           </p>
         </div>
 

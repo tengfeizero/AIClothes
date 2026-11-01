@@ -70,6 +70,13 @@ export function getGarment(id: string): Garment | null {
   return row ? rowToGarment(row) : null;
 }
 
+/** 按图片路径查找单品，不存在时创建（穿搭方案直接从素材中心选图时使用） */
+export function getOrCreateGarment(input: CreateGarmentInput): Garment {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM garments WHERE image_path = ?').get(input.imagePath) as Record<string, unknown> | undefined;
+  return row ? rowToGarment(row) : createGarment(input);
+}
+
 export function getGarmentsByIds(ids: string[]): Garment[] {
   if (ids.length === 0) return [];
   const db = getDb();

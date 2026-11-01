@@ -1,9 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 import { saveUploadedFile } from '@/lib/storage/cos';
 import { isImageFile } from '@/lib/utils/file';
 import type { UploadType } from '@/types';
 
 export const dynamic = 'force-dynamic';
+
+/** 上传图片的最大宽高（等比缩放，不超过 1920px） */
+const MAX_IMAGE_DIMENSION = 1920;
+
+/**
+ * 自动处理上传图片：按比例缩放到最大 1920px（不放大、不形变），
+ * 同时按 EXIF 方向自动旋转。无法解析的图片保持原样。
+ */
+async function normalizeImage(buffer: Buffer): Promise<Buffer> {
+  try {
+    const metadata = await sharp(buffer).metadata();
+    if (!metadata.width || !metadata.height) return buffer;
+    if (Math.max(metadata.width, metadata.height) <= MAX_IMAGE_DIMENSION) return buffer;
+
+    return await sharp(buffer)
+      .rotate()
+      .resize({
+        width: MAX_IMAGE_DIMENSION,
+        height: MAX_IMAGE_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .toBuffer();
+  } catch (error) {
+    console.warn('[Upload] 图片缩放失败，使用原图:', error);
+    return buffer;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +53,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `File size exceeds limit (${Math.round(maxSize / 1024 / 1024)}MB)` }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const original = Buffer.from(await file.arrayBuffer());
+    const buffer = await normalizeImage(original);
     const saved = await saveUploadedFile({
       type,
       filename: file.name,

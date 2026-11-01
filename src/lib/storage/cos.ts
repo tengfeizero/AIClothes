@@ -7,6 +7,7 @@ import {
 } from './local';
 import {
   deleteAliyunOssObject,
+  getAliyunOssPublicUrl,
   isAliyunOssConfigured,
   listAliyunOssObjects,
   putObjectToAliyunOss,
@@ -162,6 +163,21 @@ export function getCosConfig() {
     region: COS_REGION,
     outputDir: '/results/',
   };
+}
+
+/**
+ * 根据对象键生成公网访问地址（跟随当前存储提供方，避免把素材指向未使用的旧桶）。
+ * 对象存储未配置时返回 null，调用方应回退到本地地址。
+ */
+export function getRemotePublicUrl(key: string): string | null {
+  const normalized = key.replace(/^\//, '');
+  if (OSS_PROVIDER === 'aliyun') {
+    return isAliyunOssConfigured() ? getAliyunOssPublicUrl(normalized) : null;
+  }
+  if (!SECRET_ID || !SECRET_KEY || !COS_BUCKET) return null;
+  return COS_PUBLIC_URL
+    ? `${COS_PUBLIC_URL.replace(/\/$/, '')}/${normalized}`
+    : `https://${COS_BUCKET}.cos.${COS_REGION}.myqcloud.com/${normalized}`;
 }
 
 /** 对象存储是否已配置（未配置时素材只保留本地副本） */

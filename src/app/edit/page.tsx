@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
-import { Plus, X, Sparkles, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Sparkles, Loader2, AlertCircle, CheckCircle2, Images } from 'lucide-react';
 import { cacheImageUrl } from '@/lib/utils';
+import { getMaterialSourceUrl } from '@/lib/storage/material-types';
+import { AssetPicker } from '@/components/assets/asset-picker';
+import { SectionTitle } from '@/components/ui/section-title';
 import type { GenerationPlan } from '@/types';
 
 interface EditResult {
@@ -35,7 +38,8 @@ export default function EditPage() {
   const [editResult, setEditResult] = useState<EditResult | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const [dragActive, setDragActive] = useState(false);
+
+  const [showAssetPicker, setShowAssetPicker] = useState(false);
 
   useEffect(() => {
     fetch('/api/outfit/generation-plans?purpose=edit')
@@ -121,38 +125,6 @@ export default function EditPage() {
     }
   };
 
-  const uploadFile = async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', 'garment');
-
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.path) {
-        setInputImage(data.path);
-      } else if (data.error) {
-        setError(data.error);
-      }
-    } catch {
-      setError('图片上传失败');
-    }
-  };
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    await uploadFile(file);
-  }, []);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await uploadFile(file);
-    e.target.value = '';
-  };
-
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
 
   return (
@@ -161,7 +133,7 @@ export default function EditPage() {
         {/* 模型选择 */}
         {plans.length > 0 && (
           <div className="mb-4">
-            <div className="text-[13px] font-medium text-gray-700 mb-2">选择模型</div>
+            <SectionTitle>选择模型</SectionTitle>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {plans.map((plan) => (
                 <button
@@ -189,7 +161,7 @@ export default function EditPage() {
         {/* 原图上传 */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] font-medium text-gray-700">原图（必填）</span>
+            <SectionTitle className="">原图（必填）</SectionTitle>
             <span className="text-[11px] text-gray-400">{inputImage ? '1/1' : '0/1'}</span>
           </div>
 
@@ -209,27 +181,23 @@ export default function EditPage() {
               </div>
             </div>
           ) : (
-            <label
-              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={handleDrop}
-              className={`flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
-                dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-gray-50'
-              }`}
+            <button
+              type="button"
+              onClick={() => setShowAssetPicker(true)}
+              className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-400 bg-gray-50 hover:bg-blue-50 transition-colors"
             >
               <div className="flex flex-col items-center gap-1">
-                <Plus className="w-6 h-6 text-gray-400" />
-                <span className="text-[12px] text-gray-500">点击或拖拽添加原图</span>
-                <span className="text-[11px] text-gray-400">支持 JPG、PNG 格式</span>
+                <Images className="w-6 h-6 text-gray-400" />
+                <span className="text-[12px] text-gray-500">从素材中心选择原图</span>
+                <span className="text-[11px] text-gray-400">支持通用、套装、单品、模特、姿势等素材</span>
               </div>
-              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-            </label>
+            </button>
           )}
         </div>
 
         {/* 编辑指令 */}
         <div className="mb-4">
-          <div className="text-[13px] font-medium text-gray-700 mb-2">编辑指令（必填）</div>
+          <SectionTitle>编辑指令（必填）</SectionTitle>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -323,6 +291,17 @@ export default function EditPage() {
           )}
         </button>
       </div>
+
+      <AssetPicker
+        open={showAssetPicker}
+        maxCount={1}
+        title="从素材中心选择原图"
+        onClose={() => setShowAssetPicker(false)}
+        onConfirm={(items) => {
+          if (items[0]) setInputImage(getMaterialSourceUrl(items[0]));
+          setShowAssetPicker(false);
+        }}
+      />
     </div>
   );
 }
