@@ -9,8 +9,10 @@ import {
   listRemoteKeys,
   uploadFileToRemote,
 } from './cos';
+import { listModels } from '../db/model-store';
 
 import {
+  isItemCategory,
   isMaterialType,
   LOCAL_ONLY_TYPES,
   MATERIAL_LABELS,
@@ -84,6 +86,15 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
   const uploadDir = getUploadDir();
   const metadataMap = getMetadataMap();
 
+  // 模特文件与 models 表记录按文件名关联（identity_image_path 可能是本地路径或对象存储 URL）
+  const modelByFilename = new Map<string, { id: string; name: string; gender: string; is_default: boolean }>();
+  for (const model of listModels()) {
+    const basename = decodeURIComponent(
+      (model.identity_image_path || '').split('?')[0].split('/').pop() || ''
+    );
+    if (basename) modelByFilename.set(basename, model);
+  }
+
   let remoteKeys = new Set<string>();
   if (isRemoteStorageConfigured()) {
     try {
@@ -111,6 +122,11 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
       const needRefs = type === 'garment' || type === 'model';
       const refs = needRefs ? findReferences(filename) : { count: 0, reason: '' };
       const meta = metadataMap.get(`${type}/${filename}`);
+      const metaCategory = meta?.category || undefined;
+      // 单品子类：上装 / 下装 / 连衣裙 / 配饰 / 鞋履，上传时写入元数据
+      const itemCategory =
+        type === 'item' && isItemCategory(metaCategory) ? metaCategory : undefined;
+      const model = type === 'model' ? modelByFilename.get(filename) : undefined;
       let tags: string[] = [];
       if (meta?.tags) {
         try {
@@ -128,11 +144,14 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
         synced: !LOCAL_ONLY_TYPES.has(type) && remoteKeys.has(`uploads/${type}/${filename}`),
         referenceCount: refs.count,
         referenceReason: refs.reason,
-        title: meta?.title || undefined,
-        category: meta?.category || undefined,
+        title: meta?.title || model?.name || undefined,
+        category: metaCategory || (model ? (model.gender === 'male' ? '男' : '女') : undefined),
+        itemCategory,
         tags: Array.isArray(tags) ? tags : [],
-        source: meta?.source || undefined,
+        source: meta?.source || (model ? '定制模特' : undefined),
         remoteUrl: meta?.remote_url || undefined,
+        modelId: model?.id,
+        isDefault: model?.is_default,
       });
     }
   }
@@ -160,6 +179,42 @@ export async function deleteMaterial(type: MaterialType, filename: string): Prom
       console.warn('[Assets] 删除对象存储副本失败:', error);
     });
   }
+}
+
+export interface AssetMetadataInput {
+  type: MaterialType;
+  filename: string;
+  title?: string;
+  category?: string;
+  tags?: string[];
+  source?: string;
+  remoteUrl?: string;
+}
+
+/** 写入/更新素材元数据（素材中心手动上传的单品用它记录子类与名称） */
+export function upsertAssetMetadata(input: AssetMetadataInput): void {
+  assertSafeFilename(input.filename);
+  getDb()
+    .prepare(
+      `INSERT INTO asset_metadata (type, filename, title, category, tags, source, remote_url, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(type, filename) DO UPDATE SET
+         title = excluded.title,
+         category = excluded.category,
+         tags = excluded.tags,
+         source = excluded.source,
+         remote_url = excluded.remote_url`
+    )
+    .run(
+      input.type,
+      input.filename,
+      input.title || null,
+      input.category || null,
+      JSON.stringify(input.tags || []),
+      input.source || null,
+      input.remoteUrl || null,
+      Date.now()
+    );
 }
 
 /** 把本地素材同步到对象存储，返回公网 URL */

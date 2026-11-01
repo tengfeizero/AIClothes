@@ -219,7 +219,13 @@ export interface TryonResult {
 }
 
 // Upload types
-export type UploadType = 'general' | 'garment' | 'model' | 'pose' | 'background';
+export type UploadType =
+  | 'general'
+  | 'garment'
+  | 'item'
+  | 'model'
+  | 'pose'
+  | 'background';
 
 export interface UploadResult {
   id: string;

@@ -4,10 +4,15 @@ import { useState, useRef, useCallback } from 'react';
 import { Upload, X, ImageIcon } from 'lucide-react';
 import { cacheImageUrl, cn } from '@/lib/utils';
 
+export interface UploadedFileInfo {
+  /** 本地文件路径，如 /uploads/garment/xxx.jpg */
+  publicPath?: string;
+}
+
 interface ImageUploadProps {
   value?: string | null;
-  onChange: (path: string | null, file?: File) => void;
-  type: 'garment' | 'model' | 'pose' | 'background';
+  onChange: (path: string | null, file?: File, uploaded?: UploadedFileInfo) => void;
+  type: 'general' | 'garment' | 'item' | 'model' | 'pose' | 'background';
   label: string;
   description?: string;
   className?: string;
@@ -50,7 +55,7 @@ export function ImageUpload({ value, onChange, type, label, description, classNa
 
       const data = await res.json();
       // 使用COS完整URL（data.url），确保腾讯云MPS能通过公网访问图片
-      onChange(data.url || data.path, file);
+      onChange(data.url || data.path, file, { publicPath: data.publicPath });
     } catch (error) {
       alert(error instanceof Error ? error.message : '上传失败');
       setPreview(null);

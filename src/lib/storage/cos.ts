@@ -56,7 +56,7 @@ async function uploadToRemote(key: string, buffer: Buffer, contentType: string):
 }
 
 export interface SaveFileOptions {
-  type: 'general' | 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
+  type: 'general' | 'garment' | 'item' | 'model' | 'pose' | 'background' | 'results' | 'model3d';
   filename: string;
   buffer: Buffer;
   contentType?: string;
@@ -73,7 +73,7 @@ export interface SavedFile {
 /**
  * 生成结果类型：这些是 AI 生成的产物（图片/3D 模型），无需上传到 COS，
  * 直接落本地 public/uploads/ 即可。
- * 其余类型（garment/model/pose/background/accessories/shoes）是用户上传的素材，
+ * 其余类型（garment/item/model/pose/background）是用户上传的素材，
  * 必须上传 COS 提供公网 URL，供 AI 厂商读取输入图。
  */
 const LOCAL_RESULT_TYPES = new Set<string>(['results', 'model3d']);

@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
       id: saved.id,
       path: saved.url,
       url: saved.url,
+      // 本地文件路径（/uploads/<type>/<id>.<ext>），素材中心据此记录元数据
+      publicPath: saved.publicPath,
       filename: file.name,
     });
   } catch (error) {

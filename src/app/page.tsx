@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Shirt, User, Sparkles, CalendarDays, Wand2, Image } from 'lucide-react';
+import { Shirt, Sparkles, CalendarDays, Wand2, Image } from 'lucide-react';
 
 const features = [
   {
@@ -28,15 +28,6 @@ const features = [
     color: 'bg-indigo-500',
     bgColor: 'bg-indigo-50',
     textColor: 'text-indigo-600',
-  },
-  {
-    href: '/my-model',
-    title: '定制模特',
-    description: '上传个人照片，创建专属数字人形象',
-    icon: User,
-    color: 'bg-purple-500',
-    bgColor: 'bg-purple-50',
-    textColor: 'text-purple-600',
   },
   {
     href: '/replicate',

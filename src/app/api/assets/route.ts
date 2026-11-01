@@ -4,6 +4,7 @@ import {
   isMaterialType,
   listMaterials,
   syncMaterial,
+  upsertAssetMetadata,
 } from '@/lib/storage/assets';
 
 export const runtime = 'nodejs';
@@ -48,6 +49,19 @@ export async function POST(request: NextRequest) {
     const filename = body.filename as string | undefined;
     if (!isMaterialType(type) || !filename) {
       return NextResponse.json({ error: '缺少参数 type 或 filename' }, { status: 400 });
+    }
+
+    // 素材中心上传单品后写入元数据（名称 / 子类 / 来源）
+    if (body.action === 'metadata') {
+      upsertAssetMetadata({
+        type,
+        filename,
+        title: typeof body.title === 'string' ? body.title : undefined,
+        category: typeof body.category === 'string' ? body.category : undefined,
+        source: typeof body.source === 'string' ? body.source : undefined,
+        tags: Array.isArray(body.tags) ? (body.tags as string[]) : undefined,
+      });
+      return NextResponse.json({ success: true });
     }
 
     const url = await syncMaterial(type, filename);

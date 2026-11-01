@@ -236,10 +236,10 @@ export default function CreateOutfitPage() {
               </div>
               <p className="text-[13px] text-gray-500 mb-2">还没有定制模特</p>
               <Link
-                href="/my-model"
+                href="/assets"
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" /> 创建数字人
+                <Plus className="w-3.5 h-3.5" /> 去素材中心上传模特
               </Link>
             </div>
           ) : (

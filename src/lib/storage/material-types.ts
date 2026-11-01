@@ -3,11 +3,10 @@
 export const MATERIAL_TYPES = [
   'general',
   'garment',
+  'item',
   'model',
   'pose',
   'background',
-  'accessories',
-  'shoes',
   'results',
 ] as const;
 
@@ -15,17 +14,33 @@ export type MaterialType = (typeof MATERIAL_TYPES)[number];
 
 export const MATERIAL_LABELS: Record<MaterialType, string> = {
   general: '通用',
-  garment: '服装',
+  garment: '套装',
+  item: '单品',
   model: '模特',
   pose: '姿势',
   background: '背景',
-  accessories: '配饰',
-  shoes: '鞋子',
   results: '生成结果',
 };
 
 /** 仅存本地、无需同步到对象存储的类型（AI 生成产物） */
 export const LOCAL_ONLY_TYPES = new Set<MaterialType>(['results']);
+
+/** 单品子类：上装 / 下装 / 连衣裙 / 配饰 / 鞋履（与穿搭方案 GarmentCategory 一致） */
+export const ITEM_CATEGORIES = ['top', 'bottom', 'dress', 'accessories', 'shoes'] as const;
+
+export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
+
+export const ITEM_CATEGORY_LABELS: Record<ItemCategory, string> = {
+  top: '上装',
+  bottom: '下装',
+  dress: '连衣裙',
+  accessories: '配饰',
+  shoes: '鞋履',
+};
+
+export function isItemCategory(value: string | null | undefined): value is ItemCategory {
+  return Boolean(value) && ITEM_CATEGORIES.includes(value as ItemCategory);
+}
 
 export interface MaterialItem {
   type: MaterialType;
@@ -43,12 +58,18 @@ export interface MaterialItem {
   title?: string;
   /** 分类（服装季节 / 姿势分类） */
   category?: string;
+  /** 单品子类（仅 item 类型，已知时才有） */
+  itemCategory?: ItemCategory;
   /** 关键词标签 */
   tags: string[];
   /** 来源图库 */
   source?: string;
   /** 原图外链（图库素材才有，用于按需查看原图） */
   remoteUrl?: string;
+  /** 对应定制模特的 ID（仅 model 类型且有模特记录时） */
+  modelId?: string;
+  /** 是否为默认模特 */
+  isDefault?: boolean;
 }
 
 export function isMaterialType(value: string | null | undefined): value is MaterialType {
