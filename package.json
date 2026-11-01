@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "import:gallery": "node scripts/import-gallery.cjs"
   },
   "dependencies": {
     "ali-oss": "^6.23.0",

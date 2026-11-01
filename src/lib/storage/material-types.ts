@@ -39,6 +39,16 @@ export interface MaterialItem {
   /** 被穿搭方案引用的次数 */
   referenceCount: number;
   referenceReason: string;
+  /** 标题（导入的图库素材：服装关键词 / 姿势名） */
+  title?: string;
+  /** 分类（服装季节 / 姿势分类） */
+  category?: string;
+  /** 关键词标签 */
+  tags: string[];
+  /** 来源图库 */
+  source?: string;
+  /** 原图外链（图库素材才有，用于按需查看原图） */
+  remoteUrl?: string;
 }
 
 export function isMaterialType(value: string | null | undefined): value is MaterialType {

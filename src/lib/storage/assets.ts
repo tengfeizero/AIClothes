@@ -29,6 +29,25 @@ function assertSafeFilename(filename: string): void {
   }
 }
 
+interface AssetMetadataRow {
+  type: string;
+  filename: string;
+  title: string | null;
+  category: string | null;
+  tags: string | null;
+  source: string | null;
+  remote_url: string | null;
+}
+
+/** 读取全部素材元数据（图库导入的标题/分类/关键词等） */
+function getMetadataMap(): Map<string, AssetMetadataRow> {
+  const db = getDb();
+  const rows = db
+    .prepare('SELECT type, filename, title, category, tags, source, remote_url FROM asset_metadata')
+    .all() as AssetMetadataRow[];
+  return new Map(rows.map((row) => [`${row.type}/${row.filename}`, row]));
+}
+
 /** 统计素材被穿搭方案引用的次数（服装→方案关联；模特→方案模特） */
 function findReferences(filename: string): { count: number; reason: string } {
   const db = getDb();
@@ -63,6 +82,7 @@ function findReferences(filename: string): { count: number; reason: string } {
 export async function listMaterials(typeFilter?: MaterialType): Promise<MaterialItem[]> {
   const types: readonly MaterialType[] = typeFilter ? [typeFilter] : MATERIAL_TYPES;
   const uploadDir = getUploadDir();
+  const metadataMap = getMetadataMap();
 
   let remoteKeys = new Set<string>();
   if (isRemoteStorageConfigured()) {
@@ -87,7 +107,18 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
       const stat = await fs.stat(path.join(dir, filename)).catch(() => null);
       if (!stat?.isFile()) continue;
 
-      const refs = findReferences(filename);
+      // 只有服装和模特会被穿搭方案引用，其余类型不必查引用
+      const needRefs = type === 'garment' || type === 'model';
+      const refs = needRefs ? findReferences(filename) : { count: 0, reason: '' };
+      const meta = metadataMap.get(`${type}/${filename}`);
+      let tags: string[] = [];
+      if (meta?.tags) {
+        try {
+          tags = JSON.parse(meta.tags);
+        } catch {
+          tags = [];
+        }
+      }
       items.push({
         type,
         filename,
@@ -97,6 +128,11 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
         synced: !LOCAL_ONLY_TYPES.has(type) && remoteKeys.has(`uploads/${type}/${filename}`),
         referenceCount: refs.count,
         referenceReason: refs.reason,
+        title: meta?.title || undefined,
+        category: meta?.category || undefined,
+        tags: Array.isArray(tags) ? tags : [],
+        source: meta?.source || undefined,
+        remoteUrl: meta?.remote_url || undefined,
       });
     }
   }
@@ -116,6 +152,8 @@ export async function deleteMaterial(type: MaterialType, filename: string): Prom
   await fs.unlink(localPath).catch((error: NodeJS.ErrnoException) => {
     if (error.code !== 'ENOENT') throw error;
   });
+
+  getDb().prepare('DELETE FROM asset_metadata WHERE type = ? AND filename = ?').run(type, filename);
 
   if (!LOCAL_ONLY_TYPES.has(type) && isRemoteStorageConfigured()) {
     await deleteRemoteObject(`uploads/${type}/${filename}`).catch((error) => {

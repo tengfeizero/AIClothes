@@ -76,6 +76,18 @@ CREATE TABLE IF NOT EXISTS image_generations (
   created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS asset_metadata (
+  type TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  title TEXT,
+  category TEXT,
+  tags TEXT DEFAULT '[]',
+  source TEXT,
+  remote_url TEXT,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (type, filename)
+);
+
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
