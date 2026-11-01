@@ -45,8 +45,9 @@ export async function generateQwenImage(req: {
     { text: req.prompt },
   ];
 
+  let res: Response;
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/services/aigc/multimodal-generation/generation`, {
+    res = await fetch(`${BASE_URL}/api/v1/services/aigc/multimodal-generation/generation`, {
       method: 'POST',
       headers: buildHeaders(),
       body: JSON.stringify({
@@ -57,21 +58,28 @@ export async function generateQwenImage(req: {
         parameters: { n: 1, size: req.size || '1024*1536' },
       }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const code = (data as { code?: string }).code || res.status;
-      const message = (data as { message?: string }).message || '';
-      throw new Error(`qwen-image 生成失败: ${code} ${message}`.trim());
-    }
-    const contentList =
-      (data as { output?: { choices?: Array<{ message?: { content?: Array<{ image?: string }> } }> } })
-        ?.output?.choices?.[0]?.message?.content || [];
-    const image = contentList.find((c) => c.image)?.image;
-    if (!image) {
-      throw new Error('qwen-image 未返回图片');
-    }
-    return image;
   } catch (error) {
-    throw new Error(`qwen-image 生成失败: ${toErrorMessage(error)}`);
+    throw new Error(`qwen-image 请求失败: ${toErrorMessage(error)}`);
   }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const code = (data as { code?: string }).code || String(res.status);
+    const message = (data as { message?: string }).message || '';
+    // 阿里云内容安全审核（绿网）拒绝输入，属于内容问题而非接口错误，给出可操作的提示
+    if (code === 'DataInspectionFailed') {
+      const rejectedPart = message.includes('image') ? '输入图片' : '输入内容';
+      throw new Error(`${rejectedPart}未通过阿里云内容安全审核，请更换图片或调整提示词后重试`);
+    }
+    throw new Error(`qwen-image 生成失败: ${code} ${message}`.trim());
+  }
+
+  const contentList =
+    (data as { output?: { choices?: Array<{ message?: { content?: Array<{ image?: string }> } }> } })
+      ?.output?.choices?.[0]?.message?.content || [];
+  const image = contentList.find((c) => c.image)?.image;
+  if (!image) {
+    throw new Error('qwen-image 未返回图片');
+  }
+  return image;
 }
