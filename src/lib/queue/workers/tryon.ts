@@ -483,7 +483,7 @@ async function processGenerate(task: TaskRecord): Promise<void> {
       images: imageUrls,
       prompt,
       size: params.aliyunSize || '1024*1536',
-      model: params.model || 'qwen-image-2.0',
+      model: params.model || 'qwen-image-2.1-turbo',
     });
 
     const resultBuffer = await downloadImageAsBuffer(resultUrl);

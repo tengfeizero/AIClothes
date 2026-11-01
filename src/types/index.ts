@@ -95,7 +95,7 @@ export type GenerationMethod =
   | 'mps-tryon' // 腾讯云 MPS AI 换装（WAND-tryon，支持姿势/背景等参考图）
   | 'hunyuan-change-clothes' // 腾讯混元生图 模特换装（ChangeClothes，仅换装，无姿势/背景控制）
   | 'hunyuan-img2img' // 腾讯混元生图 图生图（ImageToImage，图像风格化/复刻）
-  | 'aliyun-qwen-image' // 阿里云百炼 qwen-image-2.0（多模态图生图，支持指令控制视角）
+  | 'aliyun-qwen-image' // 阿里云百炼 qwen-image-2.1（多模态图生图，支持指令控制视角）
   | 'tencent-hunyuan-3d' // 腾讯混元生3D（专业版，图生3D/多视角生3D，异步任务输出 GLB）
   | 'volcengine-jimeng' // 火山引擎即梦 Seedream 4.6（图生图，人像写真/穿搭生成，异步任务）
   | 'volcengine-seedit'; // 火山引擎 SeedEdit 3.0（指令编辑，文本驱动图像编辑，异步任务）
@@ -219,7 +219,7 @@ export interface TryonResult {
 }
 
 // Upload types
-export type UploadType = 'garment' | 'model' | 'pose' | 'background';
+export type UploadType = 'general' | 'garment' | 'model' | 'pose' | 'background';
 
 export interface UploadResult {
   id: string;

@@ -94,11 +94,13 @@ export default function MyModelPage() {
     if (!deleteId) return;
     try {
       const res = await fetch(`/api/model/${deleteId}`, { method: 'DELETE' });
-      if (res.ok) {
-        await fetchModels();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}) as { error?: string });
+        throw new Error(err.error || '删除失败');
       }
+      await fetchModels();
     } catch (error) {
-      console.error('Delete failed:', error);
+      alert(error instanceof Error ? error.message : '删除失败');
     } finally {
       setDeleteId(null);
     }

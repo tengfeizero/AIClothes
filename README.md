@@ -14,11 +14,10 @@
 | AI 编辑 | `/edit` | 上传单张图，用自然语言描述编辑效果（指令编辑） | 火山引擎 SeedEdit 3.0 |
 | AI 换装 | `/tryon` | 服装平铺图 + 模特图 → 指定视角的穿搭效果图 | MPS WAND-tryon / 混元换装 / qwen-image / 即梦 |
 | 定制模特 | `/my-model` | 上传人像创建专属数字人，可设为默认模特 | — |
-| 3D 平铺图 | `/3d-viewer` | 穿搭三视图用 CSS 3D Transform 做可旋转伪 3D 展示 | 复用已生成的正/侧/背图，零额外 API 成本 |
 | 3D 商品 | `/model3d` | 上传 2–8 张多视角照片，生成可拖拽的 GLB 模型 | 腾讯混元生3D（`hy-3d-3.1`） |
 | 爆款复刻 | `/replicate` | 上传爆款参考图，复刻其场景与姿态并替换服装/模特 | MPS（参考图作 pose+background）/ 混元图生图 |
 | 商品套图 | `/suite` | 单件商品图一次生成 4 张商品海报（hero/detail/selling/atmosphere） | MPS WAND-suite |
-| 穿搭方案 | `/outfit` | 单品组合成方案，一键生成正/侧/背三图，前端 Canvas 合成单品清单并导出 | MPS / qwen-image 三视角批量 |
+| 穿搭方案 | `/outfit` | 单品组合成方案，创建即生成一个任务（正/侧/背三图），结果在任务中心查看 | MPS / qwen-image 三视角批量 |
 | 任务中心 | `/tasks` | 全部异步任务的状态、进度、结果与重试入口 | — |
 
 ## 技术栈
@@ -75,7 +74,6 @@ AIClothes/
 │   │   ├── edit/                    # AI 编辑
 │   │   ├── tryon/                   # AI 换装
 │   │   ├── my-model/                # 定制模特
-│   │   ├── 3d-viewer/               # 3D 平铺图（三视图伪 3D）
 │   │   ├── model3d/                 # 3D 商品（混元生3D）
 │   │   ├── replicate/               # 爆款复刻
 │   │   ├── suite/                   # 商品套图
@@ -143,8 +141,8 @@ AIClothes/
 |---------|------|------|------|------|------|
 | `tencent-outfit-tryon-flash` ← 默认 | 腾讯云 MPS | WAND-tryon-1.0-flash | 2.12 | 3 | 6.36 |
 | `tencent-outfit-tryon-pro` | 腾讯云 MPS | WAND-tryon-1.0-pro | 2.30 | 3 | 6.90 |
-| `aliyun-outfit-qwen-image` | 阿里云百炼 | qwen-image-2.0 | 0.20 | 3 | 0.60 |
-| `aliyun-outfit-qwen-image-2-pro` | 阿里云百炼 | qwen-image-2.0-pro | 0.25 | 3 | 0.75 |
+| `aliyun-outfit-qwen-image` | 阿里云百炼 | qwen-image-2.1-turbo | 0.10 | 3 | 0.30 |
+| `aliyun-outfit-qwen-image-2-pro` | 阿里云百炼 | qwen-image-2.1-pro | 0.25 | 3 | 0.75 |
 | `aliyun-outfit-qwen-image-3` | 阿里云百炼 | qwen-image-3.0 | 0.18 | 3 | 0.54 |
 | `aliyun-outfit-qwen-image-3-pro` | 阿里云百炼 | qwen-image-3.0-pro | 0.25 | 3 | 0.75 |
 
@@ -158,8 +156,8 @@ AIClothes/
 
 | 方案 ID | 厂商 | 模型 | 单价 | 备注 |
 |---------|------|------|------|------|
-| `aliyun-tryon-qwen-image` ← 默认 | 阿里云百炼 | qwen-image-2.0 | 0.20 | 指令控制视角 |
-| `aliyun-tryon-qwen-image-2-pro` | 阿里云百炼 | qwen-image-2.0-pro | 0.25 | |
+| `aliyun-tryon-qwen-image` ← 默认 | 阿里云百炼 | qwen-image-2.1-turbo | 0.10 | 指令控制视角 |
+| `aliyun-tryon-qwen-image-2-pro` | 阿里云百炼 | qwen-image-2.1-pro | 0.25 | |
 | `tencent-tryon-pro` | 腾讯云 MPS | WAND-tryon-1.0-pro | 2.30 | 支持姿势/背景参考图 |
 | `tencent-tryon-flash` | 腾讯云 MPS | WAND-tryon-1.0-flash | 2.12 | |
 | `tencent-tryon-lite` | 腾讯云 MPS | WAND-tryon-1.0-lite | 1.50 | 最快 |
@@ -191,8 +189,8 @@ AIClothes/
 
 | 方案 ID | 厂商 | 模型 | 单价 | 最大参考图 |
 |---------|------|------|------|-----------|
-| `aliyun-qwen-free` ← 默认 | 阿里云百炼 | qwen-image-2.0 | 0.25 | 4 |
-| `aliyun-qwen-free-2-pro` | 阿里云百炼 | qwen-image-2.0-pro | 0.25 | 4 |
+| `aliyun-qwen-free` ← 默认 | 阿里云百炼 | qwen-image-2.1-turbo | 0.10 | 4 |
+| `aliyun-qwen-free-2-pro` | 阿里云百炼 | qwen-image-2.1-pro | 0.25 | 4 |
 | `aliyun-qwen-free-3` | 阿里云百炼 | qwen-image-3.0 | 0.18 | 4 |
 | `aliyun-qwen-free-3-pro` | 阿里云百炼 | qwen-image-3.0-pro | 0.25 | 4 |
 | `hunyuan-free-img2img` | 腾讯混元生图 | ImageToImage | 0.06 | 1 |
@@ -316,7 +314,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/outfit` | 列表（含 garments） |
-| POST | `/api/outfit` | `name` + `garmentIds[]`，可选 `description` `modelId` `scenePrompt` |
+| POST | `/api/outfit` | `name` + `garmentIds[]`，可选 `description` `modelId` `scenePrompt`；前端创建后随即调用 `generate` 接口提交任务 |
 | GET | `/api/outfit/:id` | 详情 + 该方案的生成历史 `generations` |
 | PATCH | `/api/outfit/:id` | 更新名称/描述/模特/场景/状态/四视图路径 |
 | DELETE | `/api/outfit/:id` | 删除 |
@@ -354,18 +352,16 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 | 页面 | 交互要点 |
 |------|---------|
-| `/` 首页 | 7 个功能卡片 + 三步使用说明 |
+| `/` 首页 | 6 个功能卡片 + 三步使用说明 |
 | `/generate` 自由生图 | 多图上传位（按方案 `maxImages` 限制），提示词支持「图1/图2…」指代上传顺序，可选输出分辨率 |
 | `/edit` AI 编辑 | 单图 + 提示词，内置快捷指令（QUICK_PROMPTS）一键填充 |
 | `/tryon` AI 换装 | 服装图 + 模特选择（我的模特 / 默认模特）+ 场景描述 + 视角；混元换装方案下需选服装类型（上衣/下装/连衣裙） |
 | `/my-model` 定制模特 | 数字人列表、上传新建、设为默认、删除 |
-| `/3d-viewer` 3D 平铺图 | 两个 Tab：复用已完成方案的三视图旋转 / 手动上传三图做 3D 效果 |
 | `/model3d` 3D 商品 | 2–8 张多视角上传 → 即时帧序列预览 → 生成后用 `<model-viewer>` 拖拽查看 GLB |
 | `/replicate` 爆款复刻 | 参考图 + 服装 + 模特 + 额外场景描述，结果与原图对比 |
 | `/suite` 商品套图 | 单件商品图 + 场景/文案描述 + 画幅比例与分辨率 |
-| `/outfit` → `/outfit/create` | 单品管理 + 模特选择 + 场景 → 建方案 |
-| `/outfit/[id]` | 选择生成方案（显示单价与总价）→ 生成进度 → 四宫格拖拽排版（正/侧/背/单品清单）→ 导出图片；下方保留全部生成记录（厂商/模型/费用） |
-| `/tasks` 任务中心 | 分页列表、状态筛选、失败重试、手动恢复 |
+| `/outfit` 穿搭方案 | 唯一入口：方案信息 + 模特选择 + 单品选择 + 生成方案（单价/总价）→ 创建后立即提交生成任务并跳转任务中心（一个方案即一个任务，无详情页） |
+| `/tasks` 任务中心 | 分页列表、状态筛选、失败重试、手动恢复；穿搭方案任务直接展示正/侧/背三视图结果 |
 
 ## 环境变量
 

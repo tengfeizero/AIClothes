@@ -4,7 +4,7 @@ import { ensureDir, getUploadDir, getPublicUrl, getFileExt } from '../utils/file
 import { generateId } from '../utils/id';
 
 export interface SaveFileOptions {
-  type: 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
+  type: 'general' | 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
   filename: string;
   buffer: Buffer;
   /** 可选：指定文件 id（用于与 COS 同步时保持文件名一致） */

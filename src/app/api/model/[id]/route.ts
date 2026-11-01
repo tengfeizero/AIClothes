@@ -58,9 +58,10 @@ export async function DELETE(
     }
     return NextResponse.json({ success: true });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete model';
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete model' },
-      { status: 500 }
+      { error: message },
+      { status: message.includes('无法删除') ? 409 : 500 }
     );
   }
 }

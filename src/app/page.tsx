@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Shirt, User, Box, Sparkles, CalendarDays, Wand2, Image } from 'lucide-react';
+import { Shirt, User, Sparkles, CalendarDays, Wand2, Image } from 'lucide-react';
 
 const features = [
   {
@@ -39,15 +39,6 @@ const features = [
     textColor: 'text-purple-600',
   },
   {
-    href: '/3d-viewer',
-    title: '3D平铺图',
-    description: '服装平铺图转3D多角度展示',
-    icon: Box,
-    color: 'bg-green-500',
-    bgColor: 'bg-green-50',
-    textColor: 'text-green-600',
-  },
-  {
     href: '/replicate',
     title: '爆款复刻',
     description: '上传参考图，复刻场景动作换上自己的服装',
@@ -59,7 +50,7 @@ const features = [
   {
     href: '/outfit',
     title: '穿搭方案',
-    description: '生成四图排版的完整穿搭方案（正/侧/背/单品清单）',
+    description: '组合单品与模特，一键生成正/侧/背三视角穿搭图',
     icon: CalendarDays,
     color: 'bg-pink-500',
     bgColor: 'bg-pink-50',

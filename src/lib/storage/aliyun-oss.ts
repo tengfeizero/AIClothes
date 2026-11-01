@@ -53,3 +53,17 @@ export async function putObjectToAliyunOss(
 export function isAliyunOssConfigured(): boolean {
   return Boolean(ACCESS_KEY_ID && ACCESS_KEY_SECRET && BUCKET);
 }
+
+/** 列出指定前缀下的对象 key 列表 */
+export async function listAliyunOssObjects(prefix: string): Promise<string[]> {
+  const oss = getClient();
+  const result = (await oss.list({ prefix, 'max-keys': 1000 }, {})) as {
+    objects?: Array<{ name: string }>;
+  };
+  return (result.objects || []).map((o) => o.name);
+}
+
+/** 删除指定 key 的对象（key 不存在时视为成功） */
+export async function deleteAliyunOssObject(key: string): Promise<void> {
+  await getClient().delete(key);
+}

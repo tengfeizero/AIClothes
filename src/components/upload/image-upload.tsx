@@ -11,9 +11,11 @@ interface ImageUploadProps {
   label: string;
   description?: string;
   className?: string;
+  /** 紧凑模式：上传区固定 h-32（与自由生图页一致），默认为正方形大图 */
+  compact?: boolean;
 }
 
-export function ImageUpload({ value, onChange, type, label, description, className }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, type, label, description, className, compact }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +95,10 @@ export function ImageUpload({ value, onChange, type, label, description, classNa
           <img
             src={cacheImageUrl(displayUrl)}
             alt={label}
-            className="w-full aspect-square object-cover rounded-xl border border-gray-200"
+            className={cn(
+              'w-full rounded-xl border border-gray-200',
+              compact ? 'h-32 bg-gray-50 object-contain' : 'aspect-square object-cover'
+            )}
           />
           <button
             type="button"
@@ -109,18 +114,19 @@ export function ImageUpload({ value, onChange, type, label, description, classNa
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
           className={cn(
-            'w-full aspect-square border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors',
+            'w-full border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors',
+            compact ? 'h-32 flex-row gap-3' : 'aspect-square flex-col gap-2',
             uploading && 'pointer-events-none opacity-50'
           )}
         >
-          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+          <div className={cn('bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0', compact ? 'w-8 h-8' : 'w-10 h-10')}>
             {uploading ? (
               <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             ) : (
-              <ImageIcon className="w-5 h-5 text-gray-400" />
+              <ImageIcon className={compact ? 'w-4 h-4 text-gray-400' : 'w-5 h-5 text-gray-400'} />
             )}
           </div>
-          <div className="text-center">
+          <div className={compact ? 'text-left' : 'text-center'}>
             <p className="text-sm font-medium text-gray-600">
               <Upload className="w-4 h-4 inline mr-1" />
               点击或拖拽上传

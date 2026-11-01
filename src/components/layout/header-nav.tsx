@@ -8,13 +8,13 @@ const navItems = [
   { href: '/generate', label: '自由生图', icon: Image },
   { href: '/edit', label: 'AI编辑', icon: WandSparkles },
   { href: '/tryon', label: 'AI换装', icon: Shirt },
-  { href: '/my-model', label: '定制模特', icon: User },
-  { href: '/3d-viewer', label: '3D平铺图', icon: Box },
-  { href: '/model3d', label: '3D商品', icon: Rotate3D },
   { href: '/replicate', label: '爆款复刻', icon: Sparkles },
   { href: '/suite', label: '商品套图', icon: Package },
   { href: '/outfit', label: '穿搭方案', icon: CalendarDays },
+  { href: '/model3d', label: '3D商品', icon: Rotate3D },
+  { href: '/my-model', label: '定制模特', icon: User },
   { href: '/tasks', label: '任务中心', icon: ListChecks },
+  { href: '/assets', label: '素材中心', icon: Box },
 ];
 
 export default function HeaderNav({ variant }: { variant: 'desktop' | 'mobile' }) {

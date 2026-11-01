@@ -117,7 +117,7 @@ async function runQwenImageView(
   garmentUrl: string,
   modelUrl: string,
   view: ViewKey,
-  model: string = 'qwen-image-2.0'
+  model: string = 'qwen-image-2.1-turbo'
 ): Promise<string> {
   const prompt = `图1中的模特穿上图2中的服装，${VIEW_PROMPTS[view]}，保持人物五官、脸型、发型、身材不变，服装版型、颜色、图案与原图完全一致，高清写实`;
   const imageRef = await generateQwenImage({ images: [modelUrl, garmentUrl], prompt, model });
@@ -259,7 +259,7 @@ export async function processOutfitBatchTask(task: TaskRecord): Promise<void> {
       }
 
       const path = await (params.method === 'aliyun-qwen-image'
-        ? runQwenImageView(garmentUrl, modelUrl, view, params.model || 'qwen-image-2.0')
+        ? runQwenImageView(garmentUrl, modelUrl, view, params.model || 'qwen-image-2.1-turbo')
         : runSingleView(
             task.id,
             garmentUrl,

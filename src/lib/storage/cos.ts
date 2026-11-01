@@ -5,7 +5,12 @@ import {
   saveUploadedFile as saveLocalUploadedFile,
   saveResultFile as saveLocalResultFile,
 } from './local';
-import { isAliyunOssConfigured, putObjectToAliyunOss } from './aliyun-oss';
+import {
+  deleteAliyunOssObject,
+  isAliyunOssConfigured,
+  listAliyunOssObjects,
+  putObjectToAliyunOss,
+} from './aliyun-oss';
 
 const SECRET_ID = process.env.TENCENT_SECRET_ID || '';
 const SECRET_KEY = process.env.TENCENT_SECRET_KEY || '';
@@ -51,7 +56,7 @@ async function uploadToRemote(key: string, buffer: Buffer, contentType: string):
 }
 
 export interface SaveFileOptions {
-  type: 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
+  type: 'general' | 'garment' | 'model' | 'pose' | 'background' | 'results' | 'accessories' | 'shoes' | 'model3d';
   filename: string;
   buffer: Buffer;
   contentType?: string;
@@ -91,21 +96,6 @@ function getCos(): COS {
 function getFileExt(filename: string): string {
   const ext = filename.split('.').pop();
   return ext ? `.${ext.toLowerCase()}` : '.jpg';
-}
-
-function getContentType(filename: string): string {
-  const ext = getFileExt(filename);
-  const types: Record<string, string> = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.webp': 'image/webp',
-    '.gif': 'image/gif',
-    '.glb': 'model/gltf-binary',
-    '.gltf': 'model/gltf+json',
-    '.obj': 'text/plain',
-  };
-  return types[ext] || 'image/jpeg';
 }
 
 export async function saveUploadedFile(options: SaveFileOptions): Promise<SavedFile> {
@@ -172,4 +162,64 @@ export function getCosConfig() {
     region: COS_REGION,
     outputDir: '/results/',
   };
+}
+
+/** 对象存储是否已配置（未配置时素材只保留本地副本） */
+export function isRemoteStorageConfigured(): boolean {
+  if (OSS_PROVIDER === 'aliyun') return isAliyunOssConfigured();
+  return Boolean(SECRET_ID && SECRET_KEY && COS_BUCKET);
+}
+
+/** 列出对象存储中指定前缀下的 key 列表 */
+export async function listRemoteKeys(prefix: string): Promise<string[]> {
+  if (useAliyunOss()) {
+    return listAliyunOssObjects(prefix);
+  }
+  const cos = getCos();
+  const res = await cos.getBucket({
+    Bucket: COS_BUCKET,
+    Region: COS_REGION,
+    Prefix: prefix,
+    MaxKeys: 1000,
+  });
+  return (res.Contents || [])
+    .map((item) => item.Key)
+    .filter((key): key is string => Boolean(key));
+}
+
+/** 删除对象存储中的文件（文件不存在时视为成功） */
+export async function deleteRemoteObject(key: string): Promise<void> {
+  if (useAliyunOss()) {
+    await deleteAliyunOssObject(key);
+    return;
+  }
+  await getCos().deleteObject({
+    Bucket: COS_BUCKET,
+    Region: COS_REGION,
+    Key: key,
+  });
+}
+
+/** 上传本地文件到对象存储，返回公网 URL（素材同步用） */
+export async function uploadFileToRemote(
+  key: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<string> {
+  return uploadToRemote(key, buffer, contentType);
+}
+
+export function getContentType(filename: string): string {
+  const ext = getFileExt(filename);
+  const types: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif',
+    '.glb': 'model/gltf-binary',
+    '.gltf': 'model/gltf+json',
+    '.obj': 'text/plain',
+  };
+  return types[ext] || 'image/jpeg';
 }

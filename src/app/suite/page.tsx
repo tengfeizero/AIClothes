@@ -106,6 +106,7 @@ export default function SuitePage() {
             type="garment"
             value={garmentPath}
             onChange={(path) => setGarmentPath(path)}
+            compact
           />
         </div>
 

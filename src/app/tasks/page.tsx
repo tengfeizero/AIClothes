@@ -11,7 +11,14 @@ interface TaskItem {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
   error: string | null;
-  result: { images?: string[]; outfitId?: string; taskType?: string; glbUrl?: string; previewUrl?: string } | null;
+  result: {
+    // 单图/套图为数组；穿搭方案三视角为 { front, side, back }
+    images?: string[] | { front?: string; side?: string; back?: string };
+    outfitId?: string;
+    taskType?: string;
+    glbUrl?: string;
+    previewUrl?: string;
+  } | null;
   created_at: number;
   completed_at: number | null;
   params: Record<string, unknown>;
@@ -191,17 +198,27 @@ export default function TasksPage() {
     failed: counts.failed,
   };
 
-  const getResultLink = (task: TaskItem): { href: string; label: string } | null => {
-    if ((task.type === 'outfit_batch' || task.type === 'outfit_suite') && task.result?.outfitId) {
-      return { href: `/outfit/${task.result.outfitId}`, label: '查看方案' };
+  const getResultImages = (task: TaskItem): { url: string; label?: string }[] => {
+    const images = task.result?.images;
+    if (Array.isArray(images)) {
+      // 穿搭方案三视角按 front/side/back 顺序返回
+      const labels = task.type === 'outfit_batch' ? ['正面', '侧面', '背面'] : [];
+      return images.map((url, i) => ({ url, label: labels[i] }));
     }
-    return null;
+    if (images) {
+      return [
+        { url: images.front, label: '正面' },
+        { url: images.side, label: '侧面' },
+        { url: images.back, label: '背面' },
+      ].filter((i): i is { url: string; label: string } => !!i.url);
+    }
+    return [];
   };
 
   const getResultThumb = (task: TaskItem): string | null => {
     // 3D 任务优先展示生成预览图
     if (task.type === 'model3d') return task.result?.previewUrl || null;
-    return task.result?.images?.[0] || null;
+    return getResultImages(task)[0]?.url || null;
   };
 
   // 从任务参数提取展示信息（tryon/replicate 用 providerName，outfit 用 provider；提示词字段不统一）
@@ -333,7 +350,7 @@ export default function TasksPage() {
             const StatusIcon = cfg.icon;
             const typeCfg = typeLabels[task.type] || { name: task.type, icon: ImageIcon, color: 'text-gray-600 bg-gray-50' };
             const TypeIcon = typeCfg.icon;
-            const resultLink = getResultLink(task);
+            const resultImages = getResultImages(task);
             const thumb = getResultThumb(task);
             const meta = getTaskMeta(task);
 
@@ -382,7 +399,7 @@ export default function TasksPage() {
                     )}
 
                     {/* 任务详情：输入图片 / 提示词 / 厂商 / 模型 / 费用 */}
-                    {(meta.inputImages.length > 0 || meta.prompt || meta.provider || meta.model) && (
+                    {(meta.inputImages.length > 0 || meta.prompt || meta.provider || meta.model || resultImages.length > 0) && (
                       <div className="mt-2.5 pt-2.5 border-t border-gray-100 space-y-1.5">
                         {meta.inputImages.length > 0 && (
                           <div className="flex items-start gap-2">
@@ -425,23 +442,30 @@ export default function TasksPage() {
                             </p>
                           </div>
                         )}
-                        {Array.isArray(task.result?.images) && task.result.images.length > 0 && (
+                        {resultImages.length > 0 && (
                           <div className="flex items-start gap-2">
                             <span className="text-[11px] text-gray-400 w-14 flex-shrink-0 leading-5">输出图片</span>
                             <div className="flex gap-1.5 flex-wrap">
-                              {task.result.images.map((img, i) => (
+                              {resultImages.map((img) => (
                                 <button
-                                  key={i}
+                                  key={img.url}
                                   type="button"
-                                  onClick={() => setPreviewImage(img)}
+                                  onClick={() => setPreviewImage(img.url)}
                                   className="cursor-zoom-in"
                                   title="点击查看大图"
                                 >
-                                  <img
-                                    src={cacheImageUrl(img)}
-                                    alt=""
-                                    className="w-10 h-10 rounded object-cover border border-gray-200 hover:opacity-90 transition-opacity"
-                                  />
+                                  <div className="relative">
+                                    <img
+                                      src={cacheImageUrl(img.url)}
+                                      alt={img.label || ''}
+                                      className="w-10 h-10 rounded object-cover border border-gray-200 hover:opacity-90 transition-opacity"
+                                    />
+                                    {img.label && (
+                                      <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center rounded-b leading-4">
+                                        {img.label}
+                                      </span>
+                                    )}
+                                  </div>
                                 </button>
                               ))}
                             </div>
@@ -461,14 +485,6 @@ export default function TasksPage() {
                       >
                         <Rotate3D className="w-3.5 h-3.5" /> 查看3D
                       </button>
-                    )}
-                    {resultLink && (
-                      <Link
-                        href={resultLink.href}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" /> {resultLink.label}
-                      </Link>
                     )}
                     {task.status === 'failed' && (
                       <>

@@ -88,6 +88,15 @@ export function setDefaultModel(id: string): Model | null {
 
 export function deleteModel(id: string): boolean {
   const db = getDb();
+
+  // outfits.model_id 有外键约束，删除被穿搭方案使用的模特会触发约束错误
+  const usedBy = db
+    .prepare('SELECT COUNT(*) AS c FROM outfits WHERE model_id = ?')
+    .get(id) as { c: number };
+  if (usedBy.c > 0) {
+    throw new Error(`该模特被 ${usedBy.c} 个穿搭方案使用，无法删除`);
+  }
+
   const result = db.prepare('DELETE FROM models WHERE id = ?').run(id);
   return result.changes > 0;
 }

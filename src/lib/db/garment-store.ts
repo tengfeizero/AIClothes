@@ -83,6 +83,10 @@ export function getGarmentsByIds(ids: string[]): Garment[] {
 
 export function deleteGarment(id: string): boolean {
   const db = getDb();
-  const result = db.prepare('DELETE FROM garments WHERE id = ?').run(id);
-  return result.changes > 0;
+  // 先从引用该单品的穿搭方案中解除关联，再删除单品本身
+  const tx = db.transaction((garmentId: string) => {
+    db.prepare('DELETE FROM outfit_garments WHERE garment_id = ?').run(garmentId);
+    return db.prepare('DELETE FROM garments WHERE id = ?').run(garmentId).changes > 0;
+  });
+  return tx(id);
 }

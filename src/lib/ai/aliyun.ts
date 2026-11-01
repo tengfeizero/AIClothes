@@ -37,7 +37,7 @@ export async function generateQwenImage(req: {
   prompt: string;
   /** 输出尺寸，如 '1024*1536'（竖版人像） */
   size?: string;
-  /** 百炼图像生成模型名（qwen-image-2.0 / qwen-image-3.0 等），默认 qwen-image-2.0 */
+  /** 百炼图像生成模型名（qwen-image-2.1-turbo / qwen-image-3.0 等），默认 qwen-image-2.1-turbo */
   model?: string;
 }): Promise<string> {
   const content: Array<{ image?: string; text?: string }> = [
@@ -50,7 +50,7 @@ export async function generateQwenImage(req: {
       method: 'POST',
       headers: buildHeaders(),
       body: JSON.stringify({
-        model: req.model || 'qwen-image-2.0',
+        model: req.model || 'qwen-image-2.1-turbo',
         input: {
           messages: [{ role: 'user', content }],
         },

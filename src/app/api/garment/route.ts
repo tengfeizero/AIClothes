@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createGarment, listGarments, deleteGarment } from '@/lib/db/garment-store';
+import { createGarment, listGarments, deleteGarment, getGarment } from '@/lib/db/garment-store';
 import type { GarmentCategory } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +41,27 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create garment' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const id = new URL(request.url).searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    if (!getGarment(id)) {
+      return NextResponse.json({ error: 'Garment not found' }, { status: 404 });
+    }
+
+    deleteGarment(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete garment' },
       { status: 500 }
     );
   }

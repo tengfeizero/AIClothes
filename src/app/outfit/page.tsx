@@ -1,135 +1,472 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
-import { CalendarDays, Plus, Trash2, Eye, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Shirt, Check, Loader2, User, Star, Plus, X, Info } from 'lucide-react';
+import Link from 'next/link';
+import { ImageUpload } from '@/components/upload/image-upload';
 import { cacheImageUrl } from '@/lib/utils';
-import type { OutfitWithGarments } from '@/types';
+import type { Garment, Model, GarmentCategory, GenerationPlan } from '@/types';
 
-const STATUS_LABELS: Record<string, { text: string; color: string }> = {
-  draft: { text: '草稿', color: 'bg-gray-100 text-gray-600' },
-  generating: { text: '生成中', color: 'bg-blue-100 text-blue-600' },
-  completed: { text: '已完成', color: 'bg-green-100 text-green-600' },
-  failed: { text: '失败', color: 'bg-red-100 text-red-600' },
-};
+const CATEGORIES: { value: GarmentCategory; label: string }[] = [
+  { value: 'top', label: '上装' },
+  { value: 'bottom', label: '下装' },
+  { value: 'dress', label: '连衣裙' },
+  { value: 'accessories', label: '配饰' },
+  { value: 'shoes', label: '鞋履' },
+];
 
-export default function OutfitListPage() {
-  const [outfits, setOutfits] = useState<OutfitWithGarments[]>([]);
-  const [loading, setLoading] = useState(true);
+interface ModelsResponse {
+  models: Model[];
+  defaultModel: Model | null;
+}
 
-  const fetchOutfits = useCallback(async () => {
-    try {
-      const res = await fetch('/api/outfit');
-      if (res.ok) {
-        const data = await res.json();
-        setOutfits(data.outfits || []);
-      }
-    } finally {
-      setLoading(false);
-    }
+export default function CreateOutfitPage() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [scenePrompt, setScenePrompt] = useState('');
+  const [garments, setGarments] = useState<Garment[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [modelsLoading, setModelsLoading] = useState(true);
+
+  const [plans, setPlans] = useState<GenerationPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
+
+  const [showAddGarment, setShowAddGarment] = useState(false);
+  const [newGarmentName, setNewGarmentName] = useState('');
+  const [newGarmentCategory, setNewGarmentCategory] = useState<GarmentCategory>('top');
+  const [newGarmentImage, setNewGarmentImage] = useState<string | null>(null);
+  const [addingGarment, setAddingGarment] = useState(false);
+
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/garment')
+      .then((r) => (r.ok ? r.json() : { garments: [] }))
+      .then((d) => setGarments(d.garments || []))
+      .catch(() => {});
+    fetch('/api/model')
+      .then((r) => (r.ok ? r.json() : { models: [], defaultModel: null }))
+      .then((d: ModelsResponse) => {
+        setModels(d.models || []);
+        if (d.defaultModel) setSelectedModelId(d.defaultModel.id);
+      })
+      .catch(() => {})
+      .finally(() => setModelsLoading(false));
+    fetch('/api/outfit/generation-plans?purpose=outfit')
+      .then((r) => (r.ok ? r.json() : { plans: [] }))
+      .then((d) => {
+        const list: GenerationPlan[] = d.plans || [];
+        setPlans(list);
+        setSelectedPlanId((prev) => prev || list[0]?.id || '');
+      })
+      .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    fetchOutfits();
-  }, [fetchOutfits]);
+  const [selectedGarmentIds, setSelectedGarmentIds] = useState<Set<string>>(new Set());
 
-  // Auto-refresh while generating
-  useEffect(() => {
-    const hasGenerating = outfits.some((o) => o.status === 'generating');
-    if (!hasGenerating) return;
-    const timer = setInterval(fetchOutfits, 3000);
-    return () => clearInterval(timer);
-  }, [outfits, fetchOutfits]);
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个穿搭方案吗？')) return;
-    await fetch(`/api/outfit/${id}`, { method: 'DELETE' });
-    await fetchOutfits();
+  const toggleGarment = (id: string) => {
+    setSelectedGarmentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        if (next.size >= 4) {
+          alert('最多选择4件单品');
+          return prev;
+        }
+        next.add(id);
+      }
+      return next;
+    });
   };
 
+  const handleDeleteGarment = async (id: string) => {
+    if (!confirm('确定删除该单品？已引用它的穿搭方案会同步解除关联。')) return;
+    try {
+      const res = await fetch(`/api/garment?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}) as { error?: string });
+        throw new Error(data.error || '删除失败');
+      }
+      setGarments((prev) => prev.filter((g) => g.id !== id));
+      setSelectedGarmentIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '删除失败');
+    }
+  };
+
+  const handleAddGarment = async () => {
+    if (!newGarmentName.trim() || !newGarmentImage) {
+      alert('请填写单品名称并上传图片');
+      return;
+    }
+    setAddingGarment(true);
+    try {
+      const res = await fetch('/api/garment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newGarmentName.trim(),
+          category: newGarmentCategory,
+          imagePath: newGarmentImage,
+        }),
+      });
+      if (!res.ok) throw new Error('添加失败');
+      const data = await res.json();
+      setGarments((prev) => [data.garment, ...prev]);
+      setSelectedGarmentIds((prev) => new Set([...prev, data.garment.id]));
+      setShowAddGarment(false);
+      setNewGarmentName('');
+      setNewGarmentImage(null);
+      setNewGarmentCategory('top');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '添加失败');
+    } finally {
+      setAddingGarment(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim()) { alert('请填写方案名称'); return; }
+    if (selectedGarmentIds.size === 0) { alert('请至少选择一件单品'); return; }
+    if (!selectedModelId) { alert('请选择模特'); return; }
+
+    setSubmitting(true);
+    try {
+      // 一个穿搭方案即一个生成任务：创建方案后立即提交生成，统一在任务中心查看
+      const res = await fetch('/api/outfit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description || undefined,
+          modelId: selectedModelId,
+          scenePrompt: scenePrompt || undefined,
+          garmentIds: Array.from(selectedGarmentIds),
+        }),
+      });
+      if (!res.ok) throw new Error('创建失败');
+      const data = await res.json();
+
+      const genRes = await fetch(`/api/outfit/${data.outfit.id}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: selectedPlanId || undefined }),
+      });
+      if (!genRes.ok) {
+        const err = await genRes.json().catch(() => ({}) as { error?: string });
+        throw new Error(err.error || '提交生成失败');
+      }
+
+      router.push('/tasks');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '创建失败');
+      setSubmitting(false);
+    }
+  };
+
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
+  const canSubmit = name.trim() && selectedGarmentIds.size > 0 && selectedModelId && !submitting;
+
   return (
-    <div className="max-w-5xl mx-auto">
-      {loading ? (
-        <div className="text-center py-12 text-gray-400">加载中...</div>
-      ) : outfits.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CalendarDays className="w-8 h-8 text-gray-400" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">暂无穿搭方案</h2>
-          <p className="text-gray-500 text-sm mb-4">创建你的第一个穿搭方案，生成正面/侧面/背面/单品清单四图排版</p>
-          <Link
-            href="/outfit/create"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-xl transition-colors"
-          >
-            <Plus className="w-4 h-4" /> 创建第一个方案
-          </Link>
+    <div className="min-h-screen bg-white">
+      {/* 顶部导航 */}
+      {/* <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+        <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+          <Shirt className="w-4 h-4 text-pink-600" />
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* 创建方案卡片 */}
-          <Link
-            href="/outfit/create"
-            className="bg-white rounded-2xl border-2 border-dashed border-pink-200 hover:border-pink-400 hover:bg-pink-50/50 transition-colors overflow-hidden group"
-          >
-            <div className="relative aspect-square bg-gray-50 flex flex-col items-center justify-center gap-2">
-              <div className="w-14 h-14 bg-pink-100 group-hover:bg-pink-200 rounded-full flex items-center justify-center transition-colors">
-                <Plus className="w-6 h-6 text-pink-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-600 group-hover:text-pink-600 transition-colors">创建方案</span>
+        <h1 className="text-[15px] font-semibold text-gray-900">创建穿搭方案</h1>
+      </div> */}
+
+      <div className="max-w-5xl mx-auto p-4 pb-24">
+        {/* 方案信息 */}
+        <div className="mb-5">
+          <div className="text-[13px] font-medium text-gray-700 mb-2">方案信息</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="text-[12px] font-medium text-gray-700">方案名称（必填）</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="例如：春日休闲穿搭"
+                className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-xl text-[13px] focus:outline-none focus:border-pink-400"
+              />
             </div>
-          </Link>
-          {outfits.map((outfit) => {
-            const status = STATUS_LABELS[outfit.status] || STATUS_LABELS.draft;
-            const coverImg = outfit.front_image_path || (outfit.garments[0]?.image_path);
-            return (
-              <div key={outfit.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                <Link href={`/outfit/${outfit.id}`}>
-                  <div className="relative aspect-square bg-gray-50">
-                    {coverImg ? (
-                      <img src={cacheImageUrl(coverImg)} alt={outfit.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <CalendarDays className="w-12 h-12" />
+            <div>
+              <label className="text-[12px] font-medium text-gray-700">场景描述（选填）</label>
+              <input
+                type="text"
+                value={scenePrompt}
+                onChange={(e) => setScenePrompt(e.target.value)}
+                placeholder="例如：在咖啡馆内，自然光"
+                className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-xl text-[13px] focus:outline-none focus:border-pink-400"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-[12px] font-medium text-gray-700">描述（选填）</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="简单描述这套穿搭..."
+              rows={2}
+              className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-xl text-[13px] resize-none focus:outline-none focus:border-pink-400"
+            />
+          </div>
+        </div>
+
+        {/* 模特选择 */}
+        <div className="mb-5">
+          <div className="text-[13px] font-medium text-gray-700 mb-2">模特选择</div>
+          {modelsLoading ? (
+            <div className="text-center py-8 text-gray-400 text-[13px]">加载模特...</div>
+          ) : models.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                <User className="w-5 h-5 text-purple-400" />
+              </div>
+              <p className="text-[13px] text-gray-500 mb-2">还没有定制模特</p>
+              <Link
+                href="/my-model"
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> 创建数字人
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 gap-2">
+              {models.map((model) => (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => setSelectedModelId(model.id)}
+                  className={`relative rounded-xl overflow-hidden border-2 aspect-square transition-all ${
+                    selectedModelId === model.id
+                      ? 'border-pink-500 ring-2 ring-pink-100'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}
+                >
+                  <img src={cacheImageUrl(model.identity_image_path)} alt={model.name} className="w-full h-full object-cover" />
+                  {model.is_default && (
+                    <div className="absolute top-1 left-1 p-0.5 bg-yellow-500 rounded-full">
+                      <Star className="w-2 h-2 text-white" />
+                    </div>
+                  )}
+                  {selectedModelId === model.id && (
+                    <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
+                      <div className="w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
                       </div>
-                    )}
-                    <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${status.color}`}>
-                      {outfit.status === 'generating' && <Loader2 className="w-3 h-3 animate-spin" />}
-                      {status.text}
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1">
+                    <p className="text-[10px] text-white font-medium truncate">{model.name}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 单品选择 */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[13px] font-medium text-gray-700">
+              选择单品
+              {selectedGarmentIds.size > 0 && (
+                <span className="text-pink-500 ml-1">已选{selectedGarmentIds.size}/4</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddGarment(!showAddGarment)}
+              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" /> 上传新单品
+            </button>
+          </div>
+
+          {showAddGarment && (
+            <div className="mb-4 p-3 bg-gray-50 rounded-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ImageUpload
+                  label="单品图片"
+                  description="上传服装平铺图"
+                  type="garment"
+                  value={newGarmentImage}
+                  onChange={(path) => setNewGarmentImage(path)}
+                />
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">单品名称</label>
+                    <input
+                      type="text"
+                      value={newGarmentName}
+                      onChange={(e) => setNewGarmentName(e.target.value)}
+                      placeholder="例如：白色T恤"
+                      className="mt-0.5 w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-[12px] focus:outline-none focus:border-pink-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-500">分类</label>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {CATEGORIES.map((cat) => (
+                        <button
+                          key={cat.value}
+                          type="button"
+                          onClick={() => setNewGarmentCategory(cat.value)}
+                          className={`px-2 py-0.5 text-[11px] font-medium rounded-md border transition-colors ${
+                            newGarmentCategory === cat.value
+                              ? 'border-pink-500 bg-pink-50 text-pink-600'
+                              : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </Link>
-                <div className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/outfit/${outfit.id}`}>
-                        <h3 className="font-semibold text-gray-900 truncate hover:text-pink-600 transition-colors">{outfit.name}</h3>
-                      </Link>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {outfit.garments.length} 件单品 · {new Date(outfit.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex gap-1 ml-2">
-                      <Link
-                        href={`/outfit/${outfit.id}`}
-                        className="p-1.5 text-gray-400 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(outfit.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleAddGarment}
+                      disabled={addingGarment || !newGarmentName || !newGarmentImage}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-pink-500 hover:bg-pink-600 disabled:bg-gray-200 text-white text-[11px] font-medium rounded-lg transition-colors"
+                    >
+                      {addingGarment ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                      添加并选中
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowAddGarment(false); setNewGarmentName(''); setNewGarmentImage(null); }}
+                      className="px-2 py-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          )}
+
+          {garments.length === 0 && !showAddGarment ? (
+            <div className="text-center py-8 text-gray-400 text-[13px]">还没有单品，请上传新单品</div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+              {garments.map((garment) => {
+                const selected = selectedGarmentIds.has(garment.id);
+                return (
+                  <div
+                    key={garment.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleGarment(garment.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleGarment(garment.id);
+                      }
+                    }}
+                    className={`relative rounded-xl overflow-hidden border-2 aspect-square transition-all cursor-pointer ${
+                      selected
+                        ? 'border-pink-500 ring-2 ring-pink-100'
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                  >
+                    <img src={cacheImageUrl(garment.image_path)} alt={garment.name} className="w-full h-full object-cover" />
+                    {selected && (
+                      <div className="absolute top-1 right-1 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={`删除 ${garment.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteGarment(garment.id);
+                      }}
+                      className="absolute top-1 left-1 w-5 h-5 bg-black/50 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1">
+                      <p className="text-[10px] text-white font-medium truncate">{garment.name}</p>
+                      <p className="text-[9px] text-white/70">{CATEGORIES.find((c) => c.value === garment.category)?.label}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* 生成方案（厂商/模型/价格） */}
+        <div className="mb-5">
+          <div className="text-[13px] font-medium text-gray-700 mb-2">生成方案</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {plans.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSelectedPlanId(p.id)}
+                className={`text-left p-3 rounded-xl border transition-colors ${
+                  selectedPlanId === p.id
+                    ? 'border-pink-500 bg-pink-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                  <span className="text-xs font-semibold text-pink-600">{p.totalCost} 元/套</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {p.provider} · {p.model}
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {p.price} 元/次 × {p.calls} 次 · {p.imagesPerCall * p.calls} 张
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 提示 */}
+        <div className="mb-4 p-3 bg-pink-50 rounded-xl flex items-start gap-2">
+          <Info className="w-4 h-4 text-pink-500 mt-0.5 flex-shrink-0" />
+          <p className="text-[11px] text-pink-700 leading-relaxed">
+            选择1-4件单品，搭配模特一键生成穿搭方案。一个方案即一个生成任务，提交后会自动跳到任务中心查看进度与正/侧/背三视图结果。
+          </p>
+        </div>
+
+        {/* 创建按钮 */}
+        <button
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          className="w-full py-3 bg-pink-500 text-white rounded-xl font-medium text-[14px] flex items-center justify-center gap-2 hover:bg-pink-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              提交中...
+            </>
+          ) : (
+            <>
+              <Check className="w-4 h-4" />
+              创建并生成{selectedPlan ? `（${selectedPlan.totalCost}元）` : ''}
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

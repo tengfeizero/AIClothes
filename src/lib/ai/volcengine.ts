@@ -17,6 +17,28 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+/**
+ * 解析火山引擎错误响应，兼容两种结构：
+ * - 业务错误：{ code: 非10000, message }
+ * - 网关/鉴权错误：{ ResponseMetadata: { Error: { CodeN, Code, Message } } }
+ */
+function extractApiError(data: unknown, status: number, rawText: string): string {
+  const d = data as {
+    code?: number;
+    message?: string;
+    ResponseMetadata?: { Error?: { CodeN?: number; Code?: string; Message?: string } };
+  };
+  const metadataError = d?.ResponseMetadata?.Error;
+  if (metadataError) {
+    const parts = [metadataError.CodeN, metadataError.Code, metadataError.Message].filter(Boolean);
+    return `HTTP ${status} ${parts.join(' ')}`;
+  }
+  if (d?.code !== undefined) {
+    return `HTTP ${status} ${d.code} ${d.message || ''}`.trim();
+  }
+  return `HTTP ${status} ${rawText.slice(0, 200)}`;
+}
+
 function hmacSha256(key: string | Buffer, data: string): Buffer {
   return createHmac('sha256', key).update(data).digest();
 }
@@ -103,8 +125,9 @@ export async function createJimengTask(req: JimengRequest): Promise<string> {
     });
     const data = await res.json().catch(() => ({}));
 
-    if (data.code !== 10000) {
-      throw new Error(`即梦任务创建失败: ${data.code} ${data.message || 'unknown'}`);
+    if (!res.ok || data.code !== 10000) {
+      console.error('[Jimeng] submit failed:', res.status, JSON.stringify(data).slice(0, 500));
+      throw new Error(extractApiError(data, res.status, JSON.stringify(data)));
     }
 
     const taskId = data.data?.task_id;
@@ -113,7 +136,8 @@ export async function createJimengTask(req: JimengRequest): Promise<string> {
     }
     return taskId;
   } catch (error) {
-    throw new Error(`即梦任务创建失败: ${toErrorMessage(error)}`);
+    const message = toErrorMessage(error);
+    throw new Error(message.startsWith('即梦任务创建失败') ? message : `即梦任务创建失败: ${message}`);
   }
 }
 
@@ -143,8 +167,8 @@ export async function queryJimengTask(taskId: string): Promise<JimengTaskResult>
   });
   const data = await res.json().catch(() => ({}));
 
-  if (data.code !== 10000) {
-    throw new Error(`即梦任务查询失败: ${data.code} ${data.message || 'unknown'}`);
+  if (!res.ok || data.code !== 10000) {
+    throw new Error(`即梦任务查询失败: ${extractApiError(data, res.status, JSON.stringify(data))}`);
   }
 
   console.log('[Jimeng] query result:', JSON.stringify(data.data, null, 2).slice(0, 500));
@@ -200,8 +224,8 @@ export async function createSeedEditTask(req: SeedEditRequest): Promise<string> 
     });
     const data = await res.json().catch(() => ({}));
 
-    if (data.code !== 10000) {
-      throw new Error(`SeedEdit任务创建失败: ${data.code} ${data.message || 'unknown'}`);
+    if (!res.ok || data.code !== 10000) {
+      throw new Error(`SeedEdit任务创建失败: ${extractApiError(data, res.status, JSON.stringify(data))}`);
     }
 
     const taskId = data.data?.task_id;
@@ -240,8 +264,8 @@ export async function querySeedEditTask(taskId: string): Promise<SeedEditTaskRes
   });
   const data = await res.json().catch(() => ({}));
 
-  if (data.code !== 10000) {
-    throw new Error(`SeedEdit任务查询失败: ${data.code} ${data.message || 'unknown'}`);
+  if (!res.ok || data.code !== 10000) {
+    throw new Error(`SeedEdit任务查询失败: ${extractApiError(data, res.status, JSON.stringify(data))}`);
   }
 
   console.log('[SeedEdit] query result:', JSON.stringify(data.data, null, 2).slice(0, 500));

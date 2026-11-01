@@ -214,6 +214,7 @@ export default function TryonPage() {
             type="garment"
             value={garmentPath}
             onChange={(path) => setGarmentPath(path)}
+            compact
           />
         </div>
 
@@ -313,6 +314,7 @@ export default function TryonPage() {
               type="model"
               value={uploadedModelPath}
               onChange={(path) => setUploadedModelPath(path)}
+              compact
             />
           )}
         </div>
@@ -327,6 +329,7 @@ export default function TryonPage() {
               type="pose"
               value={posePath}
               onChange={(path) => setPosePath(path)}
+              compact
             />
             <div className="space-y-1.5">
               <label className="text-[12px] font-medium text-gray-700">场景描述</label>

@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  deleteMaterial,
+  isMaterialType,
+  listMaterials,
+  syncMaterial,
+} from '@/lib/storage/assets';
+
+export const runtime = 'nodejs';
+
+/** 素材列表（默认为本地文件，可按类型筛选） */
+export async function GET(request: NextRequest) {
+  try {
+    const typeParam = request.nextUrl.searchParams.get('type');
+    const materials = await listMaterials(isMaterialType(typeParam) ? typeParam : undefined);
+    return NextResponse.json({ materials });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '读取素材失败' },
+      { status: 500 }
+    );
+  }
+}
+
+/** 删除素材（本地 + 对象存储）；被穿搭方案引用的素材返回 409 */
+export async function DELETE(request: NextRequest) {
+  try {
+    const type = request.nextUrl.searchParams.get('type');
+    const filename = request.nextUrl.searchParams.get('filename');
+    if (!isMaterialType(type) || !filename) {
+      return NextResponse.json({ error: '缺少参数 type 或 filename' }, { status: 400 });
+    }
+
+    await deleteMaterial(type, filename);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '删除失败';
+    const status = message.includes('无法删除') ? 409 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+/** 同步素材到对象存储 */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const type = body.type as string | undefined;
+    const filename = body.filename as string | undefined;
+    if (!isMaterialType(type) || !filename) {
+      return NextResponse.json({ error: '缺少参数 type 或 filename' }, { status: 400 });
+    }
+
+    const url = await syncMaterial(type, filename);
+    return NextResponse.json({ success: true, url });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '同步失败' },
+      { status: 500 }
+    );
+  }
+}

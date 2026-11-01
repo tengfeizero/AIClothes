@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
-import { Sparkles, Loader2, AlertCircle, CheckCircle2, Wand2 } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cacheImageUrl } from '@/lib/utils';
 import type { GenerationPlan } from '@/types';
 
@@ -28,7 +28,6 @@ const QUICK_PROMPTS = [
 export default function EditPage() {
   const [inputImage, setInputImage] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
-  const [scale, setScale] = useState(0.5);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [plans, setPlans] = useState<GenerationPlan[]>([]);
@@ -105,7 +104,6 @@ export default function EditPage() {
         body: JSON.stringify({
           garmentImagePath: inputImage,
           prompt: prompt.trim(),
-          scale,
           planId: selectedPlanId,
         }),
       });
@@ -122,14 +120,6 @@ export default function EditPage() {
       setSubmitting(false);
     }
   };
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    await uploadFile(file);
-  }, []);
 
   const uploadFile = async (file: File) => {
     const formData = new FormData();
@@ -149,9 +139,18 @@ export default function EditPage() {
     }
   };
 
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    await uploadFile(file);
+  }, []);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) await uploadFile(file);
+    e.target.value = '';
   };
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
@@ -159,33 +158,68 @@ export default function EditPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-5xl mx-auto p-4 pb-24">
-        {/* 图片上传区域 */}
+        {/* 模型选择 */}
+        {plans.length > 0 && (
+          <div className="mb-4">
+            <div className="text-[13px] font-medium text-gray-700 mb-2">选择模型</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {plans.map((plan) => (
+                <button
+                  key={plan.id}
+                  onClick={() => setSelectedPlanId(plan.id)}
+                  className={`text-left p-3 rounded-xl border transition-colors ${
+                    selectedPlanId === plan.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-gray-800 truncate">{plan.name}</span>
+                    <span className="text-[11px] font-semibold text-blue-600 ml-2 flex-shrink-0">{plan.totalCost}元</span>
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-0.5">
+                    {plan.provider} · {plan.resolution || '跟随原图'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 原图上传 */}
         <div className="mb-4">
-          <div className="text-[13px] font-medium text-gray-700 mb-2">原图</div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[13px] font-medium text-gray-700">原图（必填）</span>
+            <span className="text-[11px] text-gray-400">{inputImage ? '1/1' : '0/1'}</span>
+          </div>
+
           {inputImage ? (
-            <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
-              <Image src={cacheImageUrl(inputImage)} alt="Input" fill className="object-contain" unoptimized />
-              <button
-                onClick={() => setInputImage(null)}
-                className="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-gray-500"
-              >
-                <AlertCircle className="w-4 h-4" />
-              </button>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
+                <Image src={cacheImageUrl(inputImage)} alt="原图" fill className="object-contain" unoptimized />
+                <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded-full text-[10px] text-white">
+                  原图
+                </div>
+                <button
+                  onClick={() => setInputImage(null)}
+                  className="absolute top-2 right-2 p-1 bg-white/90 rounded-full shadow-sm hover:bg-white"
+                >
+                  <X className="w-3 h-3 text-gray-500" />
+                </button>
+              </div>
             </div>
           ) : (
             <label
               onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
               onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
-              className={`flex flex-col items-center justify-center w-full aspect-square rounded-2xl border-2 border-dashed cursor-pointer transition-colors ${
+              className={`flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
                 dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-gray-50'
               }`}
             >
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <Wand2 className="w-6 h-6 text-gray-400" />
-                </div>
-                <span className="text-[13px] text-gray-500">点击或拖拽上传图片</span>
+              <div className="flex flex-col items-center gap-1">
+                <Plus className="w-6 h-6 text-gray-400" />
+                <span className="text-[12px] text-gray-500">点击或拖拽添加原图</span>
                 <span className="text-[11px] text-gray-400">支持 JPG、PNG 格式</span>
               </div>
               <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -195,14 +229,13 @@ export default function EditPage() {
 
         {/* 编辑指令 */}
         <div className="mb-4">
-          <div className="text-[13px] font-medium text-gray-700 mb-2">编辑指令</div>
+          <div className="text-[13px] font-medium text-gray-700 mb-2">编辑指令（必填）</div>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="描述你想要的编辑效果，如：把衣服改成粉色"
-            className="w-full h-24 px-3 py-2 text-[13px] border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 resize-none placeholder:text-gray-400"
+            placeholder={'描述你想要的编辑效果，例如：\n把衣服改成粉色，背景换成海边'}
+            className="w-full h-32 px-3 py-2 text-[13px] border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 resize-none placeholder:text-gray-400"
           />
-          {/* 快捷指令 */}
           <div className="flex flex-wrap gap-1.5 mt-2">
             {QUICK_PROMPTS.map((qp) => (
               <button
@@ -215,52 +248,6 @@ export default function EditPage() {
             ))}
           </div>
         </div>
-
-        {/* 编辑强度 */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] font-medium text-gray-700">编辑强度</span>
-            <span className="text-[12px] text-gray-500">{scale.toFixed(2)}</span>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={scale}
-            onChange={(e) => setScale(parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500"
-          />
-          <div className="flex justify-between text-[11px] text-gray-400 mt-1">
-            <span>保留原图更多</span>
-            <span>跟随指令更多</span>
-          </div>
-        </div>
-
-        {/* 生成方案选择 */}
-        {plans.length > 1 && (
-          <div className="mb-4">
-            <div className="text-[13px] font-medium text-gray-700 mb-2">生成方案</div>
-            <div className="grid grid-cols-1 gap-2">
-              {plans.map((plan) => (
-                <button
-                  key={plan.id}
-                  onClick={() => setSelectedPlanId(plan.id)}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-colors text-left ${
-                    selectedPlanId === plan.id
-                      ? 'border-blue-400 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium text-gray-900 truncate">{plan.name}</div>
-                    <div className="text-[11px] text-gray-500">{plan.provider} · {plan.totalCost}元</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* 错误提示 */}
         {error && (
