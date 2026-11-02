@@ -25,6 +25,11 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+/** 免费额度用尽（账号仍处于「仅使用免费额度」模式） */
+function isFreeQuotaExceeded(code?: string, message?: string): boolean {
+  return code === 'Throttling.AllocationQuota' || /Free allocated quota exceeded/i.test(message || '');
+}
+
 /**
  * qwen-image 多模态图生图（同步）。
  * 输入多张图片（模特图/服装图/姿势图）+ 文本指令，模型理解语义后输出换装结果。
@@ -66,6 +71,11 @@ export async function generateQwenImage(req: {
   if (!res.ok) {
     const code = (data as { code?: string }).code || String(res.status);
     const message = (data as { message?: string }).message || '';
+    if (isFreeQuotaExceeded(code, message)) {
+      throw new Error(
+        'qwen-image 免费额度已用尽：请在阿里云百炼控制台关闭「仅使用免费额度」或充值后重试'
+      );
+    }
     // 阿里云内容安全审核（绿网）拒绝输入，属于内容问题而非接口错误，给出可操作的提示
     if (code === 'DataInspectionFailed') {
       const rejectedPart = message.includes('image') ? '输入图片' : '输入内容';
@@ -83,3 +93,5 @@ export async function generateQwenImage(req: {
   }
   return image;
 }
+
+

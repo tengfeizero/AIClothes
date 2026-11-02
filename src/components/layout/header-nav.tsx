@@ -2,15 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Shirt, Box, Sparkles, CalendarDays, ListChecks, Package, Rotate3D, Image, WandSparkles } from 'lucide-react';
+import { Box, Sparkles, ListChecks, Rotate3D, Image, WandSparkles } from 'lucide-react';
 
 const navItems = [
-  { href: '/generate', label: '自由生图', icon: Image },
-  { href: '/edit', label: 'AI编辑', icon: WandSparkles },
-  { href: '/tryon', label: 'AI换装', icon: Shirt },
+  { href: '/generate', label: '自由创作', icon: Image },
+  { href: '/edit', label: '精确编辑', icon: WandSparkles },
   { href: '/replicate', label: '爆款复刻', icon: Sparkles },
-  { href: '/suite', label: '商品套图', icon: Package },
-  { href: '/outfit', label: '穿搭方案', icon: CalendarDays },
   { href: '/model3d', label: '3D商品', icon: Rotate3D },
   { href: '/tasks', label: '任务中心', icon: ListChecks },
   { href: '/assets', label: '素材中心', icon: Box },

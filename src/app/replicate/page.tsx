@@ -11,8 +11,9 @@ import type { GenerationPlan } from '@/types';
 
 export default function ReplicatePage() {
   const [referencePath, setReferencePath] = useState<string | null>(null);
+  const [modelPath, setModelPath] = useState<string | null>(null);
+  const [posePath, setPosePath] = useState<string | null>(null);
   const [garmentPath, setGarmentPath] = useState<string | null>(null);
-  const [uploadedModelPath, setUploadedModelPath] = useState<string | null>(null);
   const [scenePrompt, setScenePrompt] = useState('');
   const [taskId, setTaskId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -20,10 +21,11 @@ export default function ReplicatePage() {
 
   const [plans, setPlans] = useState<GenerationPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [outputResolution, setOutputResolution] = useState<string>('1024x1536');
 
   const fetchPlans = useCallback(async () => {
     try {
-      const res = await fetch('/api/outfit/generation-plans?purpose=replicate');
+      const res = await fetch('/api/generation-plans?purpose=replicate');
       if (res.ok) {
         const data = await res.json();
         setPlans(data.plans || []);
@@ -35,12 +37,19 @@ export default function ReplicatePage() {
   useEffect(() => { fetchPlans(); }, [fetchPlans]);
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
-  const isImg2Img = selectedPlan?.method === 'hunyuan-img2img';
+
+  useEffect(() => {
+    if (selectedPlan?.resolutionOptions?.length) {
+      const preferred = selectedPlan.resolutionOptions.find(
+        (r) => `${r.width}x${r.height}` === (selectedPlan.resolution || '').replace('*', 'x')
+      );
+      const target = preferred || selectedPlan.resolutionOptions[0];
+      setOutputResolution(target.width === 0 ? 'original' : `${target.width}x${target.height}`);
+    }
+  }, [selectedPlan?.id]);
 
   const handleSubmit = useCallback(async () => {
     if (!referencePath) { alert('请选择参考图（爆款图片）'); return; }
-    if (!garmentPath) { alert('请选择要替换的服装图'); return; }
-    if (!isImg2Img && !uploadedModelPath) { alert('请选择模特图'); return; }
 
     setSubmitting(true);
     setResultImages([]);
@@ -51,10 +60,12 @@ export default function ReplicatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           referenceImagePath: referencePath,
-          garmentImagePath: garmentPath,
-          ...(isImg2Img ? {} : { modelImagePath: uploadedModelPath }),
+          modelImagePath: modelPath || undefined,
+          poseImagePath: posePath || undefined,
+          garmentImagePath: garmentPath || undefined,
           scenePrompt: scenePrompt || undefined,
           planId: selectedPlanId || undefined,
+          outputResolution,
         }),
       });
       if (!res.ok) {
@@ -68,9 +79,9 @@ export default function ReplicatePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [referencePath, garmentPath, uploadedModelPath, scenePrompt, selectedPlanId, isImg2Img]);
+  }, [referencePath, modelPath, posePath, garmentPath, scenePrompt, selectedPlanId, outputResolution]);
 
-  const canSubmit = referencePath && garmentPath && !submitting && !taskId && (isImg2Img || uploadedModelPath);
+  const canSubmit = referencePath && !submitting && !taskId;
 
   return (
     <div className="min-h-screen bg-white">
@@ -98,10 +109,36 @@ export default function ReplicatePage() {
                 </button>
               ))}
             </div>
+
+            {/* 分辨率 */}
+            {selectedPlan?.resolutionOptions && selectedPlan.resolutionOptions.length > 0 && (
+              <div className="mt-3">
+                <div className="text-[12px] font-medium text-gray-700 mb-1.5">输出分辨率</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedPlan.resolutionOptions.map((r, idx) => {
+                    const value = r.width === 0 ? 'original' : `${r.width}x${r.height}`;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setOutputResolution(value)}
+                        className={`px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors ${
+                          outputResolution === value
+                            ? 'border-blue-500 bg-blue-50 text-blue-600'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* 参考图 + 服装图选择 */}
+        {/* 参考图 + 可选项 */}
         <div className="mb-5">
           <div className="flex flex-col gap-4">
             <AssetSelect
@@ -113,8 +150,25 @@ export default function ReplicatePage() {
               placeholder="从素材中心选择参考图"
             />
             <AssetSelect
-              label="替换服装图（必填）"
-              description="选择要穿上的服装平铺图"
+              label="模特图（选填）"
+              description="不选则沿用参考图中的人物"
+              value={modelPath}
+              onChange={setModelPath}
+              defaultType="model"
+              pickerTitle="从素材中心选择模特图"
+              placeholder="从素材中心选择模特图"
+            />
+            <AssetSelect
+              label="姿势图（选填）"
+              description="不选则沿用参考图中的动作姿势"
+              value={posePath}
+              onChange={setPosePath}
+              pickerTitle="从素材中心选择姿势图"
+              placeholder="从素材中心选择姿势图"
+            />
+            <AssetSelect
+              label="服装图（选填）"
+              description="不选则沿用参考图中的服装"
               value={garmentPath}
               onChange={setGarmentPath}
               pickerTitle="从素材中心选择服装图"
@@ -123,35 +177,10 @@ export default function ReplicatePage() {
           </div>
         </div>
 
-        {/* 模特选择 */}
-        {!isImg2Img && (
-          <div className="mb-5">
-            <AssetSelect
-              label="模特图（必填）"
-              description="选择已保存的模特或素材中心里的模特图"
-              value={uploadedModelPath}
-              onChange={setUploadedModelPath}
-              defaultType="model"
-              pickerTitle="从素材中心选择模特图"
-              placeholder="从素材中心选择模特图"
-            />
-          </div>
-        )}
-
-        {/* 混元图生图提示 */}
-        {isImg2Img && (
-          <div className="mb-5 p-3 bg-blue-50 rounded-xl">
-            <p className="text-[11px] text-blue-700">
-              混元图生图方案将直接以参考图中的人物为基础复刻（姿势/背景最贴近原图），不指定模特。
-            </p>
-          </div>
-        )}
-
         {/* 高级选项 */}
         <div className="mb-5">
-          <SectionTitle>高级选项（选填）</SectionTitle>
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-gray-700">额外场景描述</label>
+            <label className="text-[12px] font-medium text-gray-700">额外指令（选填）</label>
             <textarea
               value={scenePrompt}
               onChange={(e) => setScenePrompt(e.target.value)}
@@ -162,12 +191,10 @@ export default function ReplicatePage() {
           </div>
         </div>
 
-        {/* 提示 */}
-        <div className="mb-4 p-3 bg-blue-50 rounded-xl flex items-start gap-2">
-          <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-          <p className="text-[11px] text-blue-700 leading-relaxed">
-            参考图质量直接影响复刻效果。建议选择主体清晰、人物全身、动作明显、场景完整的图片。
-            AI会自动提取参考图的姿势和背景场景，替换为你选择的模特和服装。
+        {/* 输入指令说明 */}
+        <div className="mb-5 p-3 bg-blue-50 rounded-xl">
+          <p className="text-[11px] text-blue-700">
+            以参考图（图1）为基础复刻；选填的模特图、姿势图、服装图会依次作为后续输入图，未选填的部分沿用参考图内容，系统据此动态生成输入指令。
           </p>
         </div>
 

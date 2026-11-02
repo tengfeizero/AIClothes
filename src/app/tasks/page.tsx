@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { ListChecks, Clock, CheckCircle, XCircle, Loader2, ExternalLink, Image as ImageIcon, Shirt, Sparkles, CalendarDays, LayoutGrid, Rotate3D, X, Trash2, RotateCw, RefreshCw, WandSparkles } from 'lucide-react';
+import { ListChecks, Clock, CheckCircle, XCircle, Loader2, ExternalLink, Image as ImageIcon, Shirt, Sparkles, Rotate3D, X, Trash2, RotateCw, RefreshCw, WandSparkles } from 'lucide-react';
 import Link from 'next/link';
 import { cacheImageUrl } from '@/lib/utils';
 
@@ -12,9 +12,7 @@ interface TaskItem {
   progress: number;
   error: string | null;
   result: {
-    // 单图/套图为数组；穿搭方案三视角为 { front, side, back }
-    images?: string[] | { front?: string; side?: string; back?: string };
-    outfitId?: string;
+    images?: string[];
     taskType?: string;
     glbUrl?: string;
     previewUrl?: string;
@@ -27,9 +25,6 @@ interface TaskItem {
 const typeLabels: Record<string, { name: string; icon: typeof Shirt; color: string }> = {
   tryon: { name: 'AI换装', icon: Shirt, color: 'text-blue-600 bg-blue-50' },
   replicate: { name: '爆款复刻', icon: Sparkles, color: 'text-orange-600 bg-orange-50' },
-  multi_view: { name: '多视角生成', icon: ImageIcon, color: 'text-green-600 bg-green-50' },
-  outfit_batch: { name: '穿搭方案', icon: CalendarDays, color: 'text-pink-600 bg-pink-50' },
-  outfit_suite: { name: '商品套图', icon: LayoutGrid, color: 'text-purple-600 bg-purple-50' },
   model3d: { name: '3D商品', icon: Rotate3D, color: 'text-indigo-600 bg-indigo-50' },
   generate: { name: '自由生图', icon: ImageIcon, color: 'text-cyan-600 bg-cyan-50' },
   edit: { name: 'AI编辑', icon: WandSparkles, color: 'text-emerald-600 bg-emerald-50' },
@@ -201,16 +196,7 @@ export default function TasksPage() {
   const getResultImages = (task: TaskItem): { url: string; label?: string }[] => {
     const images = task.result?.images;
     if (Array.isArray(images)) {
-      // 穿搭方案三视角按 front/side/back 顺序返回
-      const labels = task.type === 'outfit_batch' ? ['正面', '侧面', '背面'] : [];
-      return images.map((url, i) => ({ url, label: labels[i] }));
-    }
-    if (images) {
-      return [
-        { url: images.front, label: '正面' },
-        { url: images.side, label: '侧面' },
-        { url: images.back, label: '背面' },
-      ].filter((i): i is { url: string; label: string } => !!i.url);
+      return images.map((url) => ({ url }));
     }
     return [];
   };
@@ -221,20 +207,15 @@ export default function TasksPage() {
     return getResultImages(task)[0]?.url || null;
   };
 
-  // 从任务参数提取展示信息（tryon/replicate 用 providerName，outfit 用 provider；提示词字段不统一）
+  // 从任务参数提取展示信息（tryon/replicate 用 providerName；提示词字段不统一）
   const getTaskMeta = (task: TaskItem) => {
     const p = task.params || {};
 
     const inputImages: string[] = [];
-    // 穿搭方案：存在"整套单品拼图"（garmentCollageUrl）时，不再展示提交时选的单品原图，
-    // 输入图保持为「拼图 + 模特图」两张
-    const hasCollage = typeof p.garmentCollageUrl === 'string' && !!p.garmentCollageUrl;
-    if (!hasCollage && typeof p.garmentImagePath === 'string' && p.garmentImagePath) inputImages.push(p.garmentImagePath);
+    if (typeof p.garmentImagePath === 'string' && p.garmentImagePath) inputImages.push(p.garmentImagePath);
     if (typeof p.referenceImagePath === 'string' && p.referenceImagePath) inputImages.push(p.referenceImagePath);
     if (typeof p.poseImagePath === 'string' && p.poseImagePath) inputImages.push(p.poseImagePath);
     if (typeof p.backgroundImagePath === 'string' && p.backgroundImagePath) inputImages.push(p.backgroundImagePath);
-    if (typeof p.garmentCollageUrl === 'string' && p.garmentCollageUrl) inputImages.push(p.garmentCollageUrl);
-    if (Array.isArray(p.garmentImagePaths)) inputImages.push(...(p.garmentImagePaths as string[]));
     if (Array.isArray(p.imagePaths)) inputImages.push(...(p.imagePaths as string[]));
     if (typeof p.inputUrl === 'string' && p.inputUrl) inputImages.push(p.inputUrl);
     if (typeof p.modelImagePath === 'string' && p.modelImagePath) inputImages.push(p.modelImagePath);
@@ -323,13 +304,13 @@ export default function TasksPage() {
             <ListChecks className="w-8 h-8 text-gray-400" />
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">暂无任务</h2>
-          <p className="text-gray-500 text-sm mb-4">去AI换装页面开始你的第一次生成吧</p>
+          <p className="text-gray-500 text-sm mb-4">去创作页面开始你的第一次生成吧</p>
           <div className="flex gap-2 justify-center">
             <Link
-              href="/tryon"
+              href="/generate"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
             >
-              <Shirt className="w-4 h-4" /> AI换装
+              <ImageIcon className="w-4 h-4" /> 自由生图
             </Link>
             <Link
               href="/replicate"

@@ -31,7 +31,7 @@ export default function GeneratePage() {
   const [showAssetPicker, setShowAssetPicker] = useState(false);
 
   useEffect(() => {
-    fetch('/api/outfit/generation-plans?purpose=generate')
+    fetch('/api/generation-plans?purpose=generate')
       .then((r) => r.json())
       .then((data) => setPlans(data.plans || []))
       .catch(() => {});

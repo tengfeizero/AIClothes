@@ -50,37 +50,6 @@ function getMetadataMap(): Map<string, AssetMetadataRow> {
   return new Map(rows.map((row) => [`${row.type}/${row.filename}`, row]));
 }
 
-/** 统计素材被穿搭方案引用的次数（服装→方案关联；模特→方案模特） */
-function findReferences(filename: string): { count: number; reason: string } {
-  const db = getDb();
-  const like = `%${filename}%`;
-
-  const garments = db
-    .prepare('SELECT id FROM garments WHERE image_path LIKE ?')
-    .all(like) as Array<{ id: string }>;
-  let count = 0;
-  if (garments.length > 0) {
-    const placeholders = garments.map(() => '?').join(',');
-    const row = db
-      .prepare(`SELECT COUNT(*) AS c FROM outfit_garments WHERE garment_id IN (${placeholders})`)
-      .get(...garments.map((g) => g.id)) as { c: number };
-    count += row.c;
-  }
-
-  const models = db
-    .prepare('SELECT id FROM models WHERE identity_image_path LIKE ? OR avatar_path LIKE ?')
-    .all(like, like) as Array<{ id: string }>;
-  if (models.length > 0) {
-    const placeholders = models.map(() => '?').join(',');
-    const row = db
-      .prepare(`SELECT COUNT(*) AS c FROM outfits WHERE model_id IN (${placeholders})`)
-      .get(...models.map((m) => m.id)) as { c: number };
-    count += row.c;
-  }
-
-  return { count, reason: count > 0 ? `被 ${count} 个穿搭方案引用` : '' };
-}
-
 export async function listMaterials(typeFilter?: MaterialType): Promise<MaterialItem[]> {
   const types: readonly MaterialType[] = typeFilter ? [typeFilter] : MATERIAL_TYPES;
   const uploadDir = getUploadDir();
@@ -118,9 +87,6 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
       const stat = await fs.stat(path.join(dir, filename)).catch(() => null);
       if (!stat?.isFile()) continue;
 
-      // 只有服装和模特会被穿搭方案引用，其余类型不必查引用
-      const needRefs = type === 'garment' || type === 'model';
-      const refs = needRefs ? findReferences(filename) : { count: 0, reason: '' };
       const meta = metadataMap.get(`${type}/${filename}`);
       const metaCategory = meta?.category || undefined;
       // 单品子类：上装 / 下装 / 连衣裙 / 配饰 / 鞋履，上传时写入元数据
@@ -142,8 +108,6 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
         size: stat.size,
         createdAt: stat.mtimeMs,
         synced: !LOCAL_ONLY_TYPES.has(type) && remoteKeys.has(`uploads/${type}/${filename}`),
-        referenceCount: refs.count,
-        referenceReason: refs.reason,
         title: meta?.title || model?.name || undefined,
         category: metaCategory || (model ? (model.gender === 'male' ? '男' : '女') : undefined),
         itemCategory,
@@ -159,13 +123,9 @@ export async function listMaterials(typeFilter?: MaterialType): Promise<Material
   return items.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-/** 删除素材：本地文件 + 对象存储副本；被引用的素材不允许删除 */
+/** 删除素材：本地文件 + 对象存储副本 */
 export async function deleteMaterial(type: MaterialType, filename: string): Promise<void> {
   assertSafeFilename(filename);
-  const refs = findReferences(filename);
-  if (refs.count > 0) {
-    throw new Error(`${refs.reason}，无法删除`);
-  }
 
   const localPath = path.join(getUploadDir(), type, filename);
   await fs.unlink(localPath).catch((error: NodeJS.ErrnoException) => {

@@ -1,16 +1,7 @@
 import Link from 'next/link';
-import { Shirt, Sparkles, CalendarDays, Wand2, Image } from 'lucide-react';
+import { Sparkles, Wand2, Image } from 'lucide-react';
 
 const features = [
-  {
-    href: '/tryon',
-    title: 'AI换装',
-    description: '上传服装平铺图，一键生成模特穿搭场景图',
-    icon: Shirt,
-    color: 'bg-blue-500',
-    bgColor: 'bg-blue-50',
-    textColor: 'text-blue-600',
-  },
   {
     href: '/generate',
     title: '自由生图',
@@ -38,15 +29,6 @@ const features = [
     bgColor: 'bg-orange-50',
     textColor: 'text-orange-600',
   },
-  {
-    href: '/outfit',
-    title: '穿搭方案',
-    description: '组合单品与模特，一键生成正/侧/背三视角穿搭图',
-    icon: CalendarDays,
-    color: 'bg-pink-500',
-    bgColor: 'bg-pink-50',
-    textColor: 'text-pink-600',
-  },
 ];
 
 export default function HomePage() {
@@ -55,17 +37,17 @@ export default function HomePage() {
       {/* Hero */}
       <section className="text-center py-12">
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-          AI 智能穿搭平台
+          AI 电商视觉平台
         </h1>
         <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
-          上传服装平铺图，AI自动生成模特穿搭效果。支持自定义数字人、3D展示、爆款复刻和完整穿搭方案。
+          上传参考图与提示词，AI 自动生成电商视觉素材。支持自由生图、AI编辑、爆款复刻和 3D 商品展示。
         </p>
         <Link
-          href="/tryon"
+          href="/generate"
           className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
         >
-          <Shirt className="w-5 h-5" />
-          开始AI换装
+          <Image className="w-5 h-5" />
+          开始自由生图
         </Link>
       </section>
 

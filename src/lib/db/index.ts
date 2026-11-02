@@ -33,13 +33,6 @@ function migrateDb(db: Database.Database): void {
   if (!colNames.has('is_default')) {
     db.exec("ALTER TABLE models ADD COLUMN is_default INTEGER DEFAULT 0");
   }
-
-  // 商品套图结果列（旧库无此列）
-  const outfitCols = db.prepare('PRAGMA table_info(outfits)').all() as Array<{ name: string }>;
-  const outfitColNames = new Set(outfitCols.map((c) => c.name));
-  if (!outfitColNames.has('suite_image_paths')) {
-    db.exec('ALTER TABLE outfits ADD COLUMN suite_image_paths TEXT');
-  }
 }
 
 export function getDb(): Database.Database {

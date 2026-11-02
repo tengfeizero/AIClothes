@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** 删除素材（本地 + 对象存储）；被穿搭方案引用的素材返回 409 */
+/** 删除素材（本地 + 对象存储） */
 export async function DELETE(request: NextRequest) {
   try {
     const type = request.nextUrl.searchParams.get('type');

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * 返回可用的生成方案列表（厂商 / 模型 / 价格），供生成时选择。
- * ?purpose=outfit|tryon|replicate 可按业务类型过滤
+ * ?purpose=replicate|model3d|edit|generate 可按业务类型过滤
  */
 export async function GET(request: NextRequest) {
   const purpose = request.nextUrl.searchParams.get('purpose') || undefined;

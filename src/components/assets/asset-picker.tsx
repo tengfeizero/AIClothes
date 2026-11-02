@@ -67,7 +67,11 @@ export function AssetPicker({
         const res = await fetch('/api/assets');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '素材加载失败');
-        if (!cancelled) setItems(data.materials || []);
+        // 已同步到对象存储的素材排在最前（厂商可直接拉取），同组内保持原有时间倒序
+        const materials: MaterialItem[] = data.materials || [];
+        if (!cancelled) {
+          setItems([...materials].sort((a, b) => Number(b.synced) - Number(a.synced)));
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : '素材加载失败');
       } finally {

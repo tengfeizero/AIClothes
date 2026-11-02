@@ -2,15 +2,8 @@ import type { GenerationPlan, TaskType } from '@/types';
 
 // ── 各模型支持的分辨率选项 ──
 
-/** 腾讯云 MPS WAND-tryon：1K（1024x1024 / 768x1024 / 1024x768） */
-const MPS_TRYON_RESOLUTIONS = [
-  { label: '1024×1024 (1:1)', width: 1024, height: 1024 },
-  { label: '768×1024 (3:4)', width: 768, height: 1024 },
-  { label: '1024×768 (4:3)', width: 1024, height: 768 },
-];
-
 /** 阿里云 qwen-image 系列官方支持的分辨率（1:1 / 2:3 / 3:2 / 3:4 / 4:3 / 9:16 / 16:9 / 21:9） */
-const ALIYUN_QWEN_RESOLUTIONS = [
+export const ALIYUN_QWEN_RESOLUTIONS = [
   // 1:1
   { label: '1024×1024 (1:1)', width: 1024, height: 1024 },
   { label: '1536×1536 (1:1)', width: 1536, height: 1536 },
@@ -37,11 +30,6 @@ const ALIYUN_QWEN_RESOLUTIONS = [
   { label: '2048×872 (21:9)', width: 2048, height: 872 },
 ];
 
-/** 混元 ChangeClothes：跟随原图分辨率 */
-const HUNYUAN_CLOTHES_RESOLUTIONS = [
-  { label: '跟随原图', width: 0, height: 0 },
-];
-
 /** 火山引擎即梦 Seedream 4.6：1K/2K/4K 多比例 */
 const JIMENG_RESOLUTIONS = [
   // 1K
@@ -56,115 +44,21 @@ const JIMENG_RESOLUTIONS = [
   { label: '4K 4096×4096 (1:1)', width: 4096, height: 4096 },
 ];
 
-/** 阿里云 qwen-image 自由生图：与换衣共用官方支持分辨率 */
+/** 阿里云 qwen-image 自由生图：与爆款复刻共用官方支持分辨率 */
 const ALIYUN_GENERATE_RESOLUTIONS = ALIYUN_QWEN_RESOLUTIONS;
 
 /**
  * 后端可用的生成方案（厂商 / 模型 / 每次单价 / 调用次数 / 每套总价）。
- * 新增厂商或模型时只需在此追加；前端通过 GET /api/outfit/generation-plans?purpose=xxx 获取。
+ * 新增厂商或模型时只需在此追加；前端通过 GET /api/generation-plans?purpose=xxx 获取。
  */
 export const GENERATION_PLANS: GenerationPlan[] = [
-  // ── 穿搭方案 ──
+  // ── 爆款复刻（仅阿里云 qwen-image）──
   {
-    id: 'tencent-outfit-tryon-flash',
-    name: 'AI 换装（flash）三视角',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-flash',
-    taskType: 'outfit_batch',
-    price: 2.12,
-    calls: 3,
-    imagesPerCall: 1,
-    totalCost: 2.12 * 3,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
-  },
-  {
-    id: 'tencent-outfit-tryon-pro',
-    name: 'AI 换装（pro）三视角',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-pro',
-    taskType: 'outfit_batch',
-    price: 2.3,
-    calls: 3,
-    imagesPerCall: 1,
-    totalCost: 2.3 * 3,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
-  },
-  {
-    id: 'tencent-suite-flash',
-    name: 'AI 商品套图',
-    provider: '腾讯云 MPS',
-    model: 'WAND-suite-1.0-flash',
-    taskType: 'outfit_suite',
-    price: 0.79,
-    calls: 1,
-    imagesPerCall: 4,
-    totalCost: 0.79,
-  },
-  {
-    id: 'aliyun-outfit-qwen-image',
-    name: 'qwen-image-2.1-turbo 三视角',
+    id: 'aliyun-replicate-qwen-image',
+    name: '爆款复刻（qwen-image-2.1-turbo）',
     provider: '阿里云百炼',
     model: 'qwen-image-2.1-turbo',
-    taskType: 'outfit_batch',
-    method: 'aliyun-qwen-image',
-    price: 0.1,
-    calls: 3,
-    imagesPerCall: 1,
-    totalCost: 0.1 * 3,
-    resolution: '1024x1536',
-    resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
-  },
-  {
-    id: 'aliyun-outfit-qwen-image-2-pro',
-    name: 'qwen-image-2.1-pro 三视角',
-    provider: '阿里云百炼',
-    model: 'qwen-image-2.1-pro',
-    taskType: 'outfit_batch',
-    method: 'aliyun-qwen-image',
-    price: 0.25,
-    calls: 3,
-    imagesPerCall: 1,
-    totalCost: 0.25 * 3,
-    resolution: '1024x1536',
-    resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
-  },
-  {
-    id: 'aliyun-outfit-qwen-image-3',
-    name: 'qwen-image-3.0 三视角',
-    provider: '阿里云百炼',
-    model: 'qwen-image-3.0',
-    taskType: 'outfit_batch',
-    method: 'aliyun-qwen-image',
-    price: 0.18,
-    calls: 3,
-    imagesPerCall: 1,
-    totalCost: 0.18 * 3,
-    resolution: '1024x1536',
-    resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
-  },
-  {
-    id: 'aliyun-outfit-qwen-image-3-pro',
-    name: 'qwen-image-3.0-pro 三视角',
-    provider: '阿里云百炼',
-    model: 'qwen-image-3.0-pro',
-    taskType: 'outfit_batch',
-    method: 'aliyun-qwen-image',
-    price: 0.25,
-    calls: 3,
-    imagesPerCall: 1,
-    totalCost: 0.25 * 3,
-    resolution: '1024x1536',
-    resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
-  },
-  // ── AI 换装（单图）──
-  {
-    id: 'aliyun-tryon-qwen-image',
-    name: 'qwen-image-2.1-turbo 换衣',
-    provider: '阿里云百炼',
-    model: 'qwen-image-2.1-turbo',
-    taskType: 'tryon',
+    taskType: 'replicate',
     method: 'aliyun-qwen-image',
     price: 0.1,
     calls: 1,
@@ -174,11 +68,11 @@ export const GENERATION_PLANS: GenerationPlan[] = [
     resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
   },
   {
-    id: 'aliyun-tryon-qwen-image-2-pro',
-    name: 'qwen-image-2.1-pro 换衣',
+    id: 'aliyun-replicate-qwen-image-2-pro',
+    name: '爆款复刻（qwen-image-2.1-pro）',
     provider: '阿里云百炼',
     model: 'qwen-image-2.1-pro',
-    taskType: 'tryon',
+    taskType: 'replicate',
     method: 'aliyun-qwen-image',
     price: 0.25,
     calls: 1,
@@ -188,66 +82,39 @@ export const GENERATION_PLANS: GenerationPlan[] = [
     resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
   },
   {
-    id: 'tencent-tryon-pro',
-    name: 'AI 换装（pro）',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-pro',
-    taskType: 'tryon',
-    method: 'mps-tryon',
-    price: 2.3,
+    id: 'aliyun-replicate-qwen-image-3',
+    name: '爆款复刻（qwen-image-3.0）',
+    provider: '阿里云百炼',
+    model: 'qwen-image-3.0',
+    taskType: 'replicate',
+    method: 'aliyun-qwen-image',
+    price: 0.18,
     calls: 1,
     imagesPerCall: 1,
-    totalCost: 2.3,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
+    totalCost: 0.18,
+    resolution: '1024x1536',
+    resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
   },
   {
-    id: 'tencent-tryon-flash',
-    name: 'AI 换装（flash）',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-flash',
-    taskType: 'tryon',
-    method: 'mps-tryon',
-    price: 2.12,
-    calls: 1,
-    imagesPerCall: 1,
-    totalCost: 2.12,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
-  },
-  {
-    id: 'tencent-tryon-lite',
-    name: 'AI 换装（lite 轻量档）',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-lite',
-    taskType: 'tryon',
-    method: 'mps-tryon',
-    price: 1.5,
-    calls: 1,
-    imagesPerCall: 1,
-    totalCost: 1.5,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
-  },
-  {
-    id: 'hunyuan-tryon-change-clothes',
-    name: '混元生图 模特换装',
-    provider: '腾讯混元生图',
-    model: 'ChangeClothes',
-    taskType: 'tryon',
-    method: 'hunyuan-change-clothes',
+    id: 'aliyun-replicate-qwen-image-3-pro',
+    name: '爆款复刻（qwen-image-3.0-pro）',
+    provider: '阿里云百炼',
+    model: 'qwen-image-3.0-pro',
+    taskType: 'replicate',
+    method: 'aliyun-qwen-image',
     price: 0.25,
     calls: 1,
     imagesPerCall: 1,
     totalCost: 0.25,
-    resolutionOptions: HUNYUAN_CLOTHES_RESOLUTIONS,
+    resolution: '1024x1536',
+    resolutionOptions: ALIYUN_QWEN_RESOLUTIONS,
   },
   {
-    id: 'volcengine-jimeng-tryon',
-    name: '即梦换装（Seedream 4.6）',
+    id: 'volcengine-replicate-jimeng',
+    name: '爆款复刻（即梦 Seedream 4.6）',
     provider: '火山引擎',
     model: 'jimeng_seedream46_cvtob',
-    taskType: 'tryon',
+    taskType: 'replicate',
     method: 'volcengine-jimeng',
     price: 0.2,
     calls: 1,
@@ -255,61 +122,6 @@ export const GENERATION_PLANS: GenerationPlan[] = [
     totalCost: 0.2,
     resolution: '2K',
     resolutionOptions: JIMENG_RESOLUTIONS,
-  },
-  // ── 爆款复刻 ──
-  {
-    id: 'tencent-replicate-flash',
-    name: '爆款复刻（flash）',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-flash',
-    taskType: 'replicate',
-    method: 'mps-tryon',
-    price: 2.12,
-    calls: 1,
-    imagesPerCall: 1,
-    totalCost: 2.12,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
-  },
-  {
-    id: 'tencent-replicate-pro',
-    name: '爆款复刻（pro）',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-pro',
-    taskType: 'replicate',
-    method: 'mps-tryon',
-    price: 2.3,
-    calls: 1,
-    imagesPerCall: 1,
-    totalCost: 2.3,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
-  },
-  {
-    id: 'tencent-replicate-lite',
-    name: '爆款复刻（lite 轻量档）',
-    provider: '腾讯云 MPS',
-    model: 'WAND-tryon-1.0-lite',
-    taskType: 'replicate',
-    method: 'mps-tryon',
-    price: 1.5,
-    calls: 1,
-    imagesPerCall: 1,
-    totalCost: 1.5,
-    resolution: '1K',
-    resolutionOptions: MPS_TRYON_RESOLUTIONS,
-  },
-  {
-    id: 'hunyuan-replicate-img2img',
-    name: '爆款复刻（混元图生图）',
-    provider: '腾讯混元生图',
-    model: 'ImageToImage',
-    taskType: 'replicate',
-    method: 'hunyuan-img2img',
-    price: 0.06,
-    calls: 1,
-    imagesPerCall: 1,
-    totalCost: 0.06,
   },
   // ── 3D 商品展示（图生3D）──
   {
@@ -337,6 +149,19 @@ export const GENERATION_PLANS: GenerationPlan[] = [
     calls: 1,
     imagesPerCall: 1,
     totalCost: 0.2,
+    resolution: '跟随原图',
+  },
+  {
+    id: 'aliyun-qwen-edit-2-pro',
+    name: '局部重绘（Qwen Image 2.1 Pro）',
+    provider: '阿里云百炼',
+    model: 'qwen-image-2.1-pro',
+    taskType: 'edit',
+    method: 'aliyun-qwen-image',
+    price: 0.25,
+    calls: 1,
+    imagesPerCall: 1,
+    totalCost: 0.25,
     resolution: '跟随原图',
   },
   // ── 自由生图（多图参考 + 提示词）──
@@ -401,21 +226,6 @@ export const GENERATION_PLANS: GenerationPlan[] = [
     resolutionOptions: ALIYUN_GENERATE_RESOLUTIONS,
   },
   {
-    id: 'hunyuan-free-img2img',
-    name: '混元自由生图（图生图）',
-    provider: '腾讯混元生图',
-    model: 'ImageToImage',
-    taskType: 'generate',
-    method: 'hunyuan-img2img',
-    price: 0.06,
-    calls: 1,
-    imagesPerCall: 1,
-    totalCost: 0.06,
-    resolution: '跟随原图',
-    maxImages: 1,
-    resolutionOptions: HUNYUAN_CLOTHES_RESOLUTIONS,
-  },
-  {
     id: 'volcengine-jimeng-free',
     name: '即梦自由生图（Seedream 4.6）',
     provider: '火山引擎',
@@ -433,14 +243,7 @@ export const GENERATION_PLANS: GenerationPlan[] = [
 ];
 
 export function listGenerationPlans(purpose?: string): GenerationPlan[] {
-  if (purpose === 'outfit') {
-    // 穿搭方案：仅模特试衣三视角；商品套图已独立到顶部菜单「商品套图」
-    return GENERATION_PLANS.filter((p) => p.taskType === 'outfit_batch');
-  }
-  if (purpose === 'suite') {
-    return GENERATION_PLANS.filter((p) => p.taskType === 'outfit_suite');
-  }
-  if (purpose === 'tryon' || purpose === 'replicate' || purpose === 'model3d' || purpose === 'edit' || purpose === 'generate') {
+  if (purpose === 'replicate' || purpose === 'model3d' || purpose === 'edit' || purpose === 'generate') {
     return GENERATION_PLANS.filter((p) => p.taskType === purpose);
   }
   return GENERATION_PLANS;
@@ -454,11 +257,4 @@ export function getGenerationPlan(id?: string): GenerationPlan {
 export function getPlanForTaskType(taskType: TaskType, planId?: string): GenerationPlan {
   const candidates = GENERATION_PLANS.filter((p) => p.taskType === taskType);
   return candidates.find((p) => p.id === planId) || candidates[0];
-}
-
-/** 从模型版本号推断换装质量档位 */
-export function getQualityFromModel(model: string): 'lite' | 'flash' | 'pro' {
-  if (model.includes('pro')) return 'pro';
-  if (model.includes('lite')) return 'lite';
-  return 'flash';
 }

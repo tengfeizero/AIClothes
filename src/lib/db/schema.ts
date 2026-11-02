@@ -20,48 +20,6 @@ CREATE TABLE IF NOT EXISTS garments (
   created_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS outfits (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  model_id TEXT,
-  scene_prompt TEXT,
-  front_image_path TEXT,
-  side_image_path TEXT,
-  back_image_path TEXT,
-  item_list_image_path TEXT,
-  suite_image_paths TEXT,
-  status TEXT DEFAULT 'draft',
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
-  FOREIGN KEY (model_id) REFERENCES models(id)
-);
-
-CREATE TABLE IF NOT EXISTS outfit_garments (
-  id TEXT PRIMARY KEY,
-  outfit_id TEXT NOT NULL,
-  garment_id TEXT NOT NULL,
-  position INTEGER DEFAULT 0,
-  FOREIGN KEY (outfit_id) REFERENCES outfits(id) ON DELETE CASCADE,
-  FOREIGN KEY (garment_id) REFERENCES garments(id)
-);
-
-CREATE TABLE IF NOT EXISTS outfit_generations (
-  id TEXT PRIMARY KEY,
-  outfit_id TEXT NOT NULL,
-  type TEXT NOT NULL,
-  provider TEXT NOT NULL,
-  model TEXT NOT NULL,
-  price REAL NOT NULL,
-  calls INTEGER NOT NULL,
-  total_cost REAL NOT NULL,
-  images TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'completed',
-  task_id TEXT,
-  created_at INTEGER NOT NULL,
-  FOREIGN KEY (outfit_id) REFERENCES outfits(id) ON DELETE CASCADE
-);
-
 CREATE TABLE IF NOT EXISTS image_generations (
   id TEXT PRIMARY KEY,
   task_type TEXT NOT NULL,

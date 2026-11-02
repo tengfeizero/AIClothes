@@ -25,7 +25,7 @@ export const MATERIAL_LABELS: Record<MaterialType, string> = {
 /** 仅存本地、无需同步到对象存储的类型（AI 生成产物） */
 export const LOCAL_ONLY_TYPES = new Set<MaterialType>(['results']);
 
-/** 单品子类：上装 / 下装 / 连衣裙 / 配饰 / 鞋履（与穿搭方案 GarmentCategory 一致） */
+/** 单品子类：上装 / 下装 / 连衣裙 / 配饰 / 鞋履 */
 export const ITEM_CATEGORIES = ['top', 'bottom', 'dress', 'accessories', 'shoes'] as const;
 
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
@@ -51,9 +51,6 @@ export interface MaterialItem {
   createdAt: number;
   /** 对象存储中是否已有副本 */
   synced: boolean;
-  /** 被穿搭方案引用的次数 */
-  referenceCount: number;
-  referenceReason: string;
   /** 标题（导入的图库素材：服装关键词 / 姿势名） */
   title?: string;
   /** 分类（服装季节 / 姿势分类） */

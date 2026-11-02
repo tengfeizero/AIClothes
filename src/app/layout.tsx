@@ -5,8 +5,8 @@ import HeaderNav from '@/components/layout/header-nav';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AI Clothes - 智能穿搭平台',
-  description: 'AI换装、定制模特、3D展示、爆款复刻、商品套图、穿搭方案',
+  title: 'AI Clothes - AI 电商视觉平台',
+  description: '自由生图、AI编辑、爆款复刻、3D商品展示',
 };
 
 export default function RootLayout({

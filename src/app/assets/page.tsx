@@ -315,7 +315,6 @@ export default function AssetsPage() {
   };
 
   const handleDelete = async (item: MaterialItem) => {
-    if (item.referenceCount > 0) return;
     const localOnly = item.type === 'results';
     const isModel = Boolean(item.modelId);
     const message = isModel
@@ -330,7 +329,7 @@ export default function AssetsPage() {
     setError('');
     setNotice('');
     try {
-      // 模特素材需先删除模特记录，被穿搭方案使用时接口会拒绝
+      // 模特素材需先删除模特记录，再删除图片文件
       if (item.modelId) {
         const res = await fetch(`/api/model/${item.modelId}`, { method: 'DELETE' });
         if (!res.ok) {
@@ -412,7 +411,7 @@ export default function AssetsPage() {
         </div>
 
         <p className="text-[11px] text-gray-400 mb-3">
-          缩略图统一引用本地文件；对象存储副本仅用于给模型拉取素材。被穿搭方案引用的素材不可删除。套装为服装图库素材；单品包含上装、下装、连衣裙、配饰、鞋履，上传时选择子类即可按子类筛选。模特在此上传后会出现在换装/穿搭方案的模特列表，并自动设为默认。
+          缩略图统一引用本地文件；对象存储副本仅用于给模型拉取素材。套装为服装图库素材；单品包含上装、下装、连衣裙、配饰、鞋履，上传时选择子类即可按子类筛选。模特在此上传后可用于爆款复刻等需要模特的场景，并自动设为默认。
         </p>
 
         <div className="relative mb-4">
@@ -522,7 +521,7 @@ export default function AssetsPage() {
             {shown.map((item) => {
               const key = `${item.type}/${item.filename}`;
               const busy = busyKey === key;
-              const disabledDelete = item.referenceCount > 0 || busy;
+              const disabledDelete = busy;
               const localOnly = item.type === 'results';
               const typeLabel = item.itemCategory
                 ? ITEM_CATEGORY_LABELS[item.itemCategory]
@@ -588,10 +587,6 @@ export default function AssetsPage() {
                         )}
                       </div>
                     )}
-                    {item.referenceCount > 0 && (
-                      <p className="text-[10px] text-amber-600 mt-0.5">{item.referenceReason}</p>
-                    )}
-
                     <div className="flex gap-1.5 mt-2">
                       {item.remoteUrl && (
                         <a
@@ -630,13 +625,11 @@ export default function AssetsPage() {
                         onClick={() => handleDelete(item)}
                         disabled={disabledDelete}
                         title={
-                          item.referenceCount > 0
-                            ? item.referenceReason
-                            : item.modelId
-                              ? '删除模特记录与图片文件'
-                              : localOnly
-                                ? '删除本地文件'
-                                : '删除本地与对象存储文件'
+                          item.modelId
+                            ? '删除模特记录与图片文件'
+                            : localOnly
+                              ? '删除本地文件'
+                              : '删除本地与对象存储文件'
                         }
                         className={`${
                           localOnly ? 'flex-1' : ''
@@ -749,7 +742,7 @@ export default function AssetsPage() {
                 </div>
               </div>
               <p className="text-[11px] text-gray-400">
-                保存后自动设为默认模特，换装与穿搭方案会优先使用；被穿搭方案使用中的模特不可删除。
+                保存后自动设为默认模特，爆款复刻等场景会优先使用。
               </p>
               {error && (
                 <p className="text-[11px] text-red-600 flex items-start gap-1">

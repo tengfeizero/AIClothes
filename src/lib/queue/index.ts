@@ -1,7 +1,5 @@
 import { getPendingTasks, getStaleProcessingTasks, updateTask, getTask } from './task-store';
 import { processTryonTask } from './workers/tryon';
-import { processOutfitBatchTask } from './workers/outfit-batch';
-import { processOutfitSuiteTask } from './workers/outfit-suite';
 import { processModel3DTask } from './workers/model3d';
 import type { TaskRecord } from '@/types';
 
@@ -20,15 +18,6 @@ async function executeTask(task: TaskRecord): Promise<void> {
       case 'tryon':
       case 'replicate':
         await processTryonTask(task);
-        break;
-      case 'outfit_batch':
-        await processOutfitBatchTask(task);
-        break;
-      case 'outfit_suite':
-        await processOutfitSuiteTask(task);
-        break;
-      case 'multi_view':
-        await processOutfitBatchTask(task);
         break;
       case 'model3d':
         await processModel3DTask(task);
@@ -77,10 +66,8 @@ async function executeTask(task: TaskRecord): Promise<void> {
 async function checkAndRecoverStaleTasks(): Promise<void> {
   const staleTasks = getStaleProcessingTasks();
   for (const task of staleTasks) {
-    if (task.type === 'outfit_batch' || task.type === 'multi_view' || task.type === 'outfit_suite' || task.type === 'model3d') {
-      // Multi-step / 长耗时任务：重置为 pending，worker 凭已有 provider_task_id 续轮询（不重复提交计费）
-      // (outfit_batch：已完成的视角路径在 outfit 里，worker 会直接复用；未完成的视角带已有 provider_task_id 继续轮询)
-      // (outfit_suite：worker 凭 params.suiteTaskId 继续轮询，不重复提交)
+    if (task.type === 'model3d') {
+      // 长耗时任务：重置为 pending，worker 凭已有 provider_task_id 续轮询（不重复提交计费）
       updateTask(task.id, { status: 'pending', progress: 0, error: null });
       continue;
     }

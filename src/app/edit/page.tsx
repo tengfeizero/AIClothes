@@ -6,6 +6,7 @@ import { X, Sparkles, Loader2, AlertCircle, CheckCircle2, Images } from 'lucide-
 import { cacheImageUrl } from '@/lib/utils';
 import { getMaterialSourceUrl } from '@/lib/storage/material-types';
 import { AssetPicker } from '@/components/assets/asset-picker';
+import { MaskPainter, type EditMask } from '@/components/edit/mask-painter';
 import { SectionTitle } from '@/components/ui/section-title';
 import type { GenerationPlan } from '@/types';
 
@@ -30,6 +31,8 @@ const QUICK_PROMPTS = [
 
 export default function EditPage() {
   const [inputImage, setInputImage] = useState<string | null>(null);
+  /** 涂抹区域与掩膜；为空表示整图编辑 */
+  const [mask, setMask] = useState<EditMask | null>(null);
   const [prompt, setPrompt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -42,7 +45,7 @@ export default function EditPage() {
   const [showAssetPicker, setShowAssetPicker] = useState(false);
 
   useEffect(() => {
-    fetch('/api/outfit/generation-plans?purpose=edit')
+    fetch('/api/generation-plans?purpose=edit')
       .then((r) => r.json())
       .then((data) => {
         setPlans(data.plans || []);
@@ -109,6 +112,8 @@ export default function EditPage() {
           garmentImagePath: inputImage,
           prompt: prompt.trim(),
           planId: selectedPlanId,
+          region: mask?.region,
+          maskDataUrl: mask?.maskDataUrl,
         }),
       });
 
@@ -166,17 +171,22 @@ export default function EditPage() {
           </div>
 
           {inputImage ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
-                <Image src={cacheImageUrl(inputImage)} alt="原图" fill className="object-contain" unoptimized />
-                <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded-full text-[10px] text-white">
-                  原图
-                </div>
+            <div>
+              <MaskPainter src={inputImage} value={mask} onChange={setMask} />
+              <div className="flex items-center justify-between mt-2 gap-2">
+                <span className="text-[11px] text-gray-400">
+                  {mask ? '已涂抹局部区域，仅涂抹范围会被修改' : '涂抹要修改的区域；不涂抹则整图编辑'}
+                </span>
                 <button
-                  onClick={() => setInputImage(null)}
-                  className="absolute top-2 right-2 p-1 bg-white/90 rounded-full shadow-sm hover:bg-white"
+                  type="button"
+                  onClick={() => {
+                    setInputImage(null);
+                    setMask(null);
+                  }}
+                  className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-red-500 transition-colors flex-shrink-0"
                 >
-                  <X className="w-3 h-3 text-gray-500" />
+                  <X className="w-3 h-3" />
+                  移除原图
                 </button>
               </div>
             </div>
@@ -298,7 +308,10 @@ export default function EditPage() {
         title="从素材中心选择原图"
         onClose={() => setShowAssetPicker(false)}
         onConfirm={(items) => {
-          if (items[0]) setInputImage(getMaterialSourceUrl(items[0]));
+          if (items[0]) {
+            setInputImage(getMaterialSourceUrl(items[0]));
+            setMask(null);
+          }
           setShowAssetPicker(false);
         }}
       />

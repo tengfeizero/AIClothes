@@ -77,7 +77,7 @@ async function ProductList() {
 - 错误时返回错误页，用户需要按返回重填
 - 代码示例：
   ```html
-  <form action="/api/tryon" method="POST" enctype="multipart/form-data">
+  <form action="/api/generate" method="POST" enctype="multipart/form-data">
     <input type="file" name="garment">
     <button type="submit">开始生成</button>
   </form>
@@ -106,11 +106,11 @@ async function handleSubmit(e: React.FormEvent) {
   try {
     const formData = new FormData()
     formData.append('garmentImage', garmentImage)
-    const response = await fetch('/api/tryon', { method: 'POST', body: formData })
+    const response = await fetch('/api/generate', { method: 'POST', body: formData })
     const result = await response.json()
     if (result.success) {
       toast.success('任务已提交！')
-      router.push(`/outfit/${result.outfitId}`) // JS路由跳转
+      router.push(`/tasks`) // JS路由跳转，去任务中心查看进度
     }
   } catch (err) {
     toast.error('提交失败')
@@ -160,9 +160,9 @@ Next.js不是"所有东西都在服务器算"，而是**服务端/客户端组�
 - **Client Components（`'use client'`）**：状态、点击事件、动画、表单、拖拽、Canvas → 交互逻辑100%在客户端跑
 
 **项目实际例子：**
-- 拖拽编辑器`outfit-editor.tsx`标记了`'use client'`，拖拽100次也不会发请求
-- Canvas导出`lib/canvas/export.ts`完全在浏览器算，服务器零压力
-- 详情页轮询刷新是客户端`useEffect`里跑fetch，和传统SPA一样
+- 自由生图页`src/app/generate/page.tsx`标记了`'use client'`，上传、选择与轮询都在浏览器执行
+- 3D 预览`components/viewer/multi-view-3d.tsx`用 CSS 3D 变换在浏览器渲染，服务器零压力
+- 任务中心轮询刷新是客户端`useEffect`里跑fetch，和传统SPA一样
 
 ### 哪些操作需要回服务器？
 
@@ -272,9 +272,8 @@ Next.js Route Handlers本身就是**标准Node.js HTTP API服务**，返回JSON�
 src/app/api/
 ├── garment/route.ts          # 单品管理
 ├── model/                    # 模特管理
-├── outfit/                   # 穿搭方案
+├── generation-plans/         # 生成方案
 ├── tasks/                    # 任务管理
-├── tryon/                    # AI换装
 ├── upload/                   # 文件上传
 └── replicate/                # 爆款复刻
 ```

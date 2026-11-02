@@ -1,5 +1,5 @@
 // Task types
-export type TaskType = 'tryon' | 'replicate' | 'multi_view' | 'outfit_batch' | 'outfit_suite' | 'model3d' | 'edit' | 'generate';
+export type TaskType = 'tryon' | 'replicate' | 'model3d' | 'edit' | 'generate';
 export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface TaskRecord {
@@ -42,54 +42,6 @@ export interface Model {
   updated_at: number;
 }
 
-// Outfit types
-export type OutfitStatus = 'draft' | 'generating' | 'completed' | 'failed';
-
-export interface Outfit {
-  id: string;
-  name: string;
-  description: string | null;
-  model_id: string | null;
-  scene_prompt: string | null;
-  front_image_path: string | null;
-  side_image_path: string | null;
-  back_image_path: string | null;
-  item_list_image_path: string | null;
-  /** AI 商品套图结果 URL 数组 */
-  suite_image_paths: string[];
-  status: OutfitStatus;
-  created_at: number;
-  updated_at: number;
-}
-
-export interface OutfitWithGarments extends Outfit {
-  garments: Garment[];
-}
-
-// 穿搭方案生成记录（每次生成永久保留，含厂商/模型/费用）
-export type GenerationType = 'tryon' | 'suite';
-
-export interface GenerationRecord {
-  id: string;
-  outfit_id: string;
-  type: GenerationType;
-  /** 模型厂商，如 腾讯云 MPS */
-  provider: string;
-  /** 模型版本号，如 WAND-tryon-1.0-flash */
-  model: string;
-  /** 每次调用单价（元） */
-  price: number;
-  /** 每套调用次数 */
-  calls: number;
-  /** 总费用 = price * calls */
-  total_cost: number;
-  /** tryon：按 [正面, 侧面, 背面] 顺序；suite：海报图数组 */
-  images: string[];
-  status: 'completed' | 'failed';
-  task_id: string | null;
-  created_at: number;
-}
-
 // 生成方案使用的底层 AI 能力（决定 worker 调用哪个厂商接口）
 export type GenerationMethod =
   | 'mps-tryon' // 腾讯云 MPS AI 换装（WAND-tryon，支持姿势/背景等参考图）
@@ -112,7 +64,7 @@ export interface GenerationPlan {
   name: string;
   provider: string;
   model: string;
-  /** 生成的业务类型：outfit_batch（三视角试衣）/ outfit_suite（套图）/ tryon（单图换装）/ replicate（爆款复刻） */
+  /** 生成的业务类型：tryon（单图换装）/ replicate（爆款复刻） */
   taskType: TaskType;
   /** 底层调用能力，缺省视为 mps-tryon */
   method?: GenerationMethod;
@@ -127,10 +79,10 @@ export interface GenerationPlan {
   maxImages?: number;
 }
 
-// AI 换装 / 爆款复刻 / 商品套图 / 3D 模型生成 的记录（单图任务历史，永久保留）
+// AI 换装 / 爆款复刻 / 3D 模型生成 的记录（单图任务历史，永久保留）
 export interface ImageGenerationRecord {
   id: string;
-  task_type: 'tryon' | 'replicate' | 'suite' | 'model3d' | 'generate';
+  task_type: 'tryon' | 'replicate' | 'model3d' | 'generate';
   provider: string;
   model: string;
   price: number;
@@ -140,40 +92,6 @@ export interface ImageGenerationRecord {
   status: 'completed' | 'failed';
   task_id: string | null;
   created_at: number;
-}
-
-// Outfit batch generate params
-export interface OutfitBatchParams {
-  outfitId: string;
-  garmentImagePaths: string[];
-  modelId?: string;
-  modelImagePath?: string;
-  scenePrompt?: string;
-  views: ('front' | 'side' | 'back')[];
-  quality?: 'lite' | 'flash' | 'pro';
-  resolution?: '1K' | '2K' | '4K';
-}
-
-// AI 商品套图任务参数
-export interface OutfitSuiteParams {
-  outfitId: string;
-  /** 商品套图输入：单品图 URL 列表（多件时由 worker 拼图后上传 COS） */
-  garmentImagePaths: string[];
-  scenePrompt?: string;
-  panelRatio?: string;
-  panelResolution?: string;
-}
-
-// Tryon API types
-export interface TryonParams {
-  garmentImagePath: string;
-  modelImagePath?: string;
-  modelId?: string;
-  backgroundPrompt?: string;
-  poseImagePath?: string;
-  view?: 'front' | 'side' | 'back';
-  /** 混元生图 模特换装 需要的服装类型（Upper-body / Lower-body / Dress） */
-  clothesType?: 'Upper-body' | 'Lower-body' | 'Dress';
 }
 
 export interface ReplicateParams {

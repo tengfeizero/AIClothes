@@ -161,7 +161,7 @@ export default function Model3DPage() {
 
   // 加载生成方案
   useEffect(() => {
-    fetch('/api/outfit/generation-plans?purpose=model3d')
+    fetch('/api/generation-plans?purpose=model3d')
       .then((r) => (r.ok ? r.json() : { plans: [] }))
       .then((d) => d.plans?.[0] && setPlan(d.plans[0]))
       .catch(() => undefined);

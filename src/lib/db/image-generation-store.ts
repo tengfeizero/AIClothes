@@ -3,7 +3,7 @@ import { generateId } from '../utils/id';
 import type { ImageGenerationRecord } from '@/types';
 
 export interface CreateImageGenerationInput {
-  taskType: 'tryon' | 'replicate' | 'suite' | 'model3d' | 'generate';
+  taskType: 'tryon' | 'replicate' | 'model3d' | 'generate';
   /** 模型厂商，如 腾讯云 MPS */
   provider: string;
   /** 模型版本号，如 WAND-tryon-1.0-flash */
@@ -20,7 +20,7 @@ export interface CreateImageGenerationInput {
 function rowToRecord(row: Record<string, unknown>): ImageGenerationRecord {
   return {
     id: row.id as string,
-    task_type: row.task_type as 'tryon' | 'replicate' | 'suite' | 'model3d' | 'generate',
+    task_type: row.task_type as 'tryon' | 'replicate' | 'model3d' | 'generate',
     provider: row.provider as string,
     model: row.model as string,
     price: row.price as number,
@@ -67,7 +67,7 @@ export function getImageGeneration(id: string): ImageGenerationRecord | null {
   return row ? rowToRecord(row) : null;
 }
 
-export function listImageGenerations(taskType?: 'tryon' | 'replicate' | 'suite' | 'model3d' | 'generate'): ImageGenerationRecord[] {
+export function listImageGenerations(taskType?: 'tryon' | 'replicate' | 'model3d' | 'generate'): ImageGenerationRecord[] {
   const db = getDb();
   const rows = taskType
     ? (db
