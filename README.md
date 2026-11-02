@@ -69,49 +69,72 @@ npm run build && npm start
 ```
 AIClothes/
 ├── data/
-│   └── aiclothes.db                 # SQLite 数据库（WAL，含 -wal/-shm 附属文件）
-├── docs/                            # 设计与 API 调研笔记、预览截图
+│   └── aiclothes.db                 # SQLite 数据库（首次请求自动创建，WAL 模式）
+├── docs/
+│   ├── screenshots/                 # README 界面截图
+│   ├── api_jm.md                    # 即梦 API 调研
+│   ├── api_seed.md                  # Seedream / SeedEdit API 调研
+│   ├── JavaScriptFullStack.md       # Next.js 全栈问答
+│   ├── note.md                      # 各功能实现方案与成本
+│   └── provider.md                  # 厂商能力与价格对比
 ├── public/
 │   ├── default-models/              # 预置模特图（当前为空）
-│   └── uploads/
-│       ├── cache/                   # /api/image-cache 的本地图片缓存
+│   └── uploads/                     # 运行时文件（.gitignore 已忽略）
+│       ├── cache/                   # /api/image-cache 的图片缓存（可再生）
 │       ├── general/                 # 通用素材
 │       ├── garment/                 # 套装素材
 │       ├── item/                    # 单品素材（上装/下装/连衣裙/配饰/鞋履）
-│       ├── model/                   # 模特素材
+│       ├── model/                   # 模特素材（当前为空）
 │       ├── pose/                    # 姿势素材与编辑掩膜
-│       ├── background/              # 背景素材
-│       ├── results/                 # AI 生成结果（仅本地）
-│       ├── model3d/                 # 生成的 GLB 与预览图（仅本地）
-│       └── garments|models|poses|backgrounds|accessories/  # 早期目录遗留，可清理
+│       └── results/                 # AI 生成结果（仅本地）
+│                                    # background/、model3d/ 首次使用对应功能时自动创建
+├── scripts/
+│   └── import-gallery.cjs           # 图库批量导入脚本（素材中心数据来源）
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx               # 根布局（顶栏 + 导航）
-│   │   ├── page.tsx                 # 首页功能入口
+│   │   ├── page.tsx                 # 首页（3 个功能入口）
+│   │   ├── globals.css
 │   │   ├── generate/                # 自由生图
-│   │   ├── edit/                    # AI 编辑
-│   │   ├── model3d/                 # 3D 商品（混元生3D）
+│   │   ├── edit/                    # AI 编辑（涂抹局部）
 │   │   ├── replicate/               # 爆款复刻
-│   │   ├── assets/                  # 素材中心（上传模特 / 图库素材）
+│   │   ├── model3d/                 # 3D 商品
+│   │   ├── assets/                  # 素材中心
 │   │   ├── tasks/                   # 任务中心
-│   │   └── api/                     # 见「API 参考」
+│   │   └── api/
+│   │       ├── 3d/generate/route.ts
+│   │       ├── assets/route.ts
+│   │       ├── edit/route.ts
+│   │       ├── garment/route.ts
+│   │       ├── generate/route.ts
+│   │       ├── generation-plans/route.ts
+│   │       ├── image-cache/route.ts
+│   │       ├── image-generations/route.ts
+│   │       ├── model/route.ts
+│   │       ├── model/[id]/route.ts
+│   │       ├── replicate/route.ts
+│   │       ├── tasks/route.ts
+│   │       ├── tasks/[id]/route.ts
+│   │       ├── tasks/[id]/reconcile/route.ts
+│   │       └── upload/route.ts
 │   ├── components/
 │   │   ├── layout/header-nav.tsx    # 顶部导航（桌面 + 移动）
 │   │   ├── upload/image-upload.tsx  # 图片上传组件
-│   │   ├── assets/                  # 素材选择器（素材中心 / 各生成页共用）
+│   │   ├── assets/                  # asset-picker.tsx / asset-select.tsx
 │   │   ├── edit/mask-painter.tsx    # 涂抹画布（生成外接框 + 黑白掩膜）
 │   │   ├── task-status/task-status.tsx  # 任务状态与进度
-│   │   └── viewer/
-│   │       ├── multi-view-3d.tsx    # 三视图 CSS 3D 旋转
-│   │       └── spin-360.tsx         # 帧序列 360° 预览
+│   │   ├── ui/section-title.tsx     # 通用区块标题
+│   │   └── viewer/                  # multi-view-3d.tsx / spin-360.tsx
 │   ├── lib/
 │   │   ├── ai/
 │   │   │   ├── generation-plans.ts  # ★ 生成方案目录（厂商/模型/单价/分辨率）
+│   │   │   ├── aliyun.ts            # 阿里云百炼 qwen-image
+│   │   │   ├── volcengine.ts        # 火山引擎即梦 Seedream / SeedEdit
 │   │   │   ├── tencent.ts           # 腾讯云 MPS（遗留换装接口）
 │   │   │   ├── hunyuan.ts           # 腾讯混元生图（遗留图生图）
 │   │   │   ├── tencent3d.ts         # 腾讯混元生3D（异步 GLB）
-│   │   │   ├── volcengine.ts        # 火山引擎（即梦 Seedream / SeedEdit）
-│   │   │   └── aliyun.ts            # 阿里云百炼 qwen-image
+│   │   │   ├── tencent-types.ts     # 腾讯接口类型
+│   │   │   └── index.ts             # 厂商客户端导出
 │   │   ├── queue/
 │   │   │   ├── index.ts             # 调度器（轮询取任务 + 超时恢复）
 │   │   │   ├── task-store.ts        # tasks 表读写
@@ -132,11 +155,21 @@ AIClothes/
 │   │   │   ├── assets.ts            # 素材扫描 / 同步 / 删除
 │   │   │   └── material-types.ts    # 素材类型与前端共享常量
 │   │   └── utils/                   # cn / cacheImageUrl / file / id
-│   └── types/index.ts               # 全局类型定义
+│   └── types/
+│       └── index.ts                 # 全局类型定义
 ├── next.config.js
 ├── tailwind.config.ts
-└── .env.example
+├── postcss.config.js
+├── tsconfig.json
+├── package.json
+├── .env.example
+├── LICENSE
+└── README.md
 ```
+
+本地辅助目录（已被 `.gitignore` 忽略，不随仓库分发）：
+- `clone-ai-costume-gallery/`、`clone-ai-pose-gallery/`：`npm run import:gallery` 读取的套装/姿势图库抓取源。
+- `.next/`、`node_modules/`：构建与依赖产物。
 
 ## 生成方案目录
 
@@ -399,6 +432,5 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - 首页 `src/app/page.tsx` 只有 3 个功能卡片，缺少导航里已有的「3D商品 `/model3d`」与「素材中心 `/assets`」入口。
 - `public/default-models/` 为空目录，预置模特库能力实际未启用。
-- `public/uploads` 下保留 `garments|models|poses|backgrounds|accessories` 等早期目录，与新目录并存，可在确认无引用后清理。
 - 任务队列为进程内实现，仅适合单实例部署；多实例需改为外部队列（Redis/DB 轮询锁）。
 - 无鉴权与用户体系，所有数据全局共享，上线前需补充登录与数据隔离。
