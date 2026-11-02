@@ -270,12 +270,17 @@ React本身只负责"把状态映射成DOM"，不提供现成UI组件，生态�
 Next.js Route Handlers本身就是**标准Node.js HTTP API服务**，返回JSON格式，小程序、App都可以直接调用。项目现有API结构：
 ```
 src/app/api/
+├── generate/route.ts         # 自由生图
+├── edit/route.ts             # AI编辑（支持涂抹掩膜）
+├── replicate/route.ts        # 爆款复刻
+├── 3d/generate/route.ts      # 3D商品
+├── assets/route.ts           # 素材中心（列表/同步/删除）
 ├── garment/route.ts          # 单品管理
 ├── model/                    # 模特管理
 ├── generation-plans/         # 生成方案
-├── tasks/                    # 任务管理
-├── upload/                   # 文件上传
-└── replicate/                # 爆款复刻
+├── tasks/                    # 任务管理（含 /:id/reconcile）
+├── upload/                   # 文件上传（本地 + 对象存储同步）
+└── image-cache/              # 图片缓存代理
 ```
 这些全是标准RESTful API：`GET/POST/PUT/DELETE`，和Express/NestJS写的API没有区别。
 
@@ -286,7 +291,8 @@ src/app/api/
 | CORS跨域 | Web端同源不需要 | 配置CORS允许跨域 |
 | 认证授权 | 无鉴权 | 加JWT/OAuth/微信登录 |
 | 返回格式 | 不太统一 | 统一`{ code, data, message }`格式 |
-| 文件上传 | 存本地文件系统 | 可考虑直传OSS/COS |
+| 文件上传 | 素材落本地 + 同步对象存储（COS/OSS），结果仅本地 | 可改为前端直传对象存储，服务端只发签名 |
+| 生成结果 | 本地 `public/uploads/results` | 多实例部署需换对象存储或共享存储，并改为队列消费 |
 | 数据库 | SQLite（单机） | 用户量增长换PostgreSQL/MySQL |
 | API版本 | 无版本 | 加`/api/v1/`前缀 |
 

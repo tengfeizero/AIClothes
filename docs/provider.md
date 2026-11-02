@@ -1,6 +1,6 @@
 # AI 服务厂商总览
 
-> 梳理日期：2026-08-12 · 覆盖：爆款复刻 / 通用图像生成
+> 梳理日期：2026-08-12 · 最近更新：2026-11-02 · 覆盖：自由生图 / AI 编辑 / 爆款复刻 / 3D 商品
 > 价格为官方公开价（已标注验证状态），实际以各家控制台为准。
 > 美元兑人民币按 2026-08-12 中国外汇交易中心中间价 1 USD = 6.7882 CNY 换算（≈6.79）。
 
@@ -10,7 +10,7 @@
 
 | 功能 | 最优方案 | 单价 | 理由 |
 |---|---|---|---|
-| AI 换装（高保真） | 阿里百炼 aitryon | 0.20 元/张 | 专用试穿模型，版型/印花保持好；⚠️ **2026-10-10 下线**，官方推荐迁移至 qwen-image-2.0（同价 0.2 元） |
+| AI 换装（高保真） | 阿里百炼 qwen-image 系列 | 0.10~0.25 元/张 | aitryon 已于 2026-10-10 下线，官方推荐迁移至 qwen-image；多图输入 + 文本指令 |
 | AI 换装（姿势/背景还原） | 腾讯 MPS WAND-tryon flash | 2.12 元/次 | 唯一支持姿势/背景参考图的国内方案 |
 | 爆款复刻（成本优先） | 腾讯混元 ImageToImage | 0.06 元/张 | 国内最便宜通用图生图 |
 | 爆款复刻（读懂参考图） | Google Nano Banana 2 | $0.05/张（≈0.34 元） | 参考图编辑能力质变级，但涉及数据出境，合规需评估 |
@@ -22,41 +22,44 @@
 
 ## 二、国内厂商
 
-### 腾讯云（已接入 4 个方案）
+### 腾讯云（已接入混元生3D）
 
 | 产品 | 模型/接口 | 单价 | 能力 | 状态 |
 |---|---|---|---|---|
-| MPS AI 换装 | WAND-tryon-1.0-flash | 2.12 元/次 | 支持姿势/背景/配饰/鞋等最多 13 张参考图 | ✅ 已接入 |
-| MPS AI 换装 | WAND-tryon-1.0-pro | 2.3 元/次 | 高质量档 | ✅ 已接入 |
-| MPS AI 换装 | WAND-tryon-1.0-lite | 1.5 元/次（占位价） | 轻量档，官方计费页未公开单价 | ✅ 已接入（⚠️ 上线前核对价格） |
-| 混元生图 | ChangeClothes（模特换装） | 0.25 元/张起 | 仅换装，无姿势/背景控制 | ✅ 已接入 |
-| 混元生图 | ImageToImage（图生图） | 0.06 元/张 | 通用图生图/风格化 | ✅ 已接入 |
+| 混元生3D | hy-3d-3.1 | 3.60 元/次 | 2–8 张多视角图生 GLB，可开 PBR | ✅ 已接入（`/model3d`） |
+| MPS AI 换装 | WAND-tryon-1.0-flash | 2.12 元/次 | 支持姿势/背景/配饰/鞋等最多 13 张参考图 | ⚠️ 接口保留，页面入口已移除 |
+| MPS AI 换装 | WAND-tryon-1.0-pro | 2.3 元/次 | 高质量档 | ⚠️ 接口保留，页面入口已移除 |
+| MPS AI 换装 | WAND-tryon-1.0-lite | 1.5 元/次（占位价） | 轻量档，官方计费页未公开单价 | ⚠️ 接口保留，页面入口已移除 |
+| 混元生图 | ChangeClothes（模特换装） | 0.25 元/张起 | 仅换装，无姿势/背景控制 | ⚠️ 接口保留，页面入口已移除 |
+| 混元生图 | ImageToImage（图生图） | 0.06 元/张 | 通用图生图/风格化 | ⚠️ 接口保留，页面入口已移除 |
 
-- 密钥：`TENCENT_SECRET_ID` / `TENCENT_SECRET_KEY`（MPS 与 aiart 共用）
-- 需开通：MPS 服务、TokenHub 混元生图服务，授权 `QcloudMPSFullAccess` / `QcloudAIARTFullAccess`
+- 密钥：`TENCENT_SECRET_ID` / `TENCENT_SECRET_KEY`（MPS、混元生图、混元生3D、COS 共用）
+- 需开通：MPS 服务、TokenHub 混元生图服务、混元生3D 服务，授权 `QcloudMPSFullAccess` / `QcloudAIARTFullAccess`
 
-### 阿里云（已接入 4 个方案）
+### 阿里云（已接入 qwen-image 系列）
 
 | 产品 | 模型/接口 | 单价 | 能力 | 状态 |
 |---|---|---|---|---|
-| 百炼 AI 试衣 | aitryon | 0.20 元/张 | 上/下装/连衣裙试穿，保留人脸，异步接口 | ✅ 已接入（⚠️ **2026-10-10 下线**） |
-| 百炼 AI 试衣 | aitryon-plus | 0.50 元/张 | 高质量档 | 未接入（随 aitryon 一并下线） |
-| 百炼 | **qwen-image-2.0**（aitryon 官方推荐替代） | **0.20 元/张** | 多模态图生图/编辑，支持姿势指令控制（真三视角），同步接口，RPM 120 | ✅ 已接入 |
+| 百炼 AI 试衣 | aitryon | 0.20 元/张 | 上/下装/连衣裙试穿，保留人脸，异步接口 | ⛔ 已于 2026-10-10 下线 |
+| 百炼 AI 试衣 | aitryon-plus | 0.50 元/张 | 高质量档 | ⛔ 随 aitryon 一并下线 |
+| 百炼 | **qwen-image 系列**（2.1-turbo / 2.1-pro / 3.0 / 3.0-pro） | 0.10 / 0.25 / 0.18 / 0.25 元/张 | 多模态图生图/编辑，支持姿势指令控制，同步接口 | ✅ 已接入 |
 | 通义万相 | wan2.7-image | ~0.4 元/张 | 文生图/图生图 | 未接入 |
 
 - 密钥：`ALIYUN_BAILIAN_API_KEY`（**仅北京地域** API Key）
-- aitryon 系列（aitryon / aitryon-plus / aitryon-refiner / aitryon-parsing-v1）**2026-10-10 正式下线**，需在此之前迁移至 qwen-image-2.0 并完成参数调优与业务验证
-- qwen-image-2.0 换衣方式与 aitryon 专用接口不同：多图输入（模特图+服装图[+姿势图]）+ 文本指令，`POST /api/v1/services/aigc/multimodal-generation/generation`
+- qwen-image 换衣方式与 aitryon 专用接口不同：多图输入（模特图+服装图[+姿势图]）+ 文本指令，`POST /api/v1/services/aigc/multimodal-generation/generation`
+- 分辨率以 `W*H` 字符串透传，失败码 `AllocationQuota.FreeTierOnly` / `Throttling.AllocationQuota` 表示免费额度用尽，需在控制台关闭「仅使用免费额度」或充值
 
-### 字节火山引擎（未接入）
+### 字节火山引擎（已接入 Seedream / SeedEdit）
 
-| 产品 | 模型/接口 | 单价 | 能力 |
-|---|---|---|---|
-| 即梦 | 图生图 3.0 智能参考 | 0.2 元/图 | 参考图生成，可做复刻 |
-| 即梦 | AI 营销商品图 3.0 | 0.2 元/张 | 电商商品图（单张，无多宫格） |
-| 即梦 | SeedEdit / Seedream 4.5 | ~0.04 元/张（国际版报价） | 指令式编辑，编辑一致性提升大 |
+| 产品 | 模型/接口 | 单价 | 能力 | 状态 |
+|---|---|---|---|---|
+| 即梦 图生图 | `jimeng_seedream46_cvtob`（Seedream 4.6） | 0.20 元/图 | 多图参考生成，可做爆款复刻 / 自由生图 | ✅ 已接入 |
+| 即梦 指令编辑 | `seededit_v3.0`（SeedEdit 3.0） | 0.20 元/张 | 指令式局部/整图编辑 | ✅ 已接入 |
+| 即梦 | 图生图 3.0 智能参考 | 0.2 元/图 | 参考图生成，可做复刻 | 未接入 |
+| 即梦 | AI 营销商品图 3.0 | 0.2 元/张 | 电商商品图（单张，无多宫格） | 未接入 |
 
-- 坑：默认并发仅 1~2，增购贵（500 元/日/并发），不适合异步队列多任务
+- 密钥：`VOLCENGINE_ACCESS_KEY` / `VOLCENGINE_SECRET_KEY`，地域 `cn-north-1`
+- 坑：默认并发仅 1~2，增购贵（500 元/日/并发），不适合高并发同步调用；项目通过异步队列串行化
 
 ### 百度智能云（未接入）
 
@@ -137,7 +140,7 @@
 | IDM-VTON（KAIST） | CC BY-NC-SA 4.0 | 试穿 SOTA 之一，细节还原强，非商用 |
 | OOTDiffusion | 代码 MIT，权重许可存争议 | 商用有法律风险 |
 
-**结论**：商业化项目无法用开源 VTON 替代付费试穿 API；AI 换装继续用 aitryon（0.2 元/张）。
+**结论**：商业化项目无法用开源 VTON 替代付费试穿 API；换装/复刻继续用 qwen-image 系列或即梦 Seedream。
 
 ### 部署方式与成本提示
 
@@ -166,18 +169,38 @@
 
 | 功能页 | 可选方案（前端可切换） |
 |---|---|
-| 爆款复刻 /replicate | qwen-image-2.1-turbo（默认）/ qwen-image-2.1-pro / qwen-image-3.0 / qwen-image-3.0-pro / 即梦 Seedream 4.6 |
-| AI 编辑 /edit | SeedEdit 3.0（默认，涂抹局部时裁切编辑后按掩膜羽化贴回）/ qwen-image-2.1-pro（涂抹局部裁切编辑后按掩膜贴回） |
+| 自由生图 `/generate` | qwen-image-2.1-turbo（默认）/ qwen-image-2.1-pro / qwen-image-3.0 / qwen-image-3.0-pro / 即梦 Seedream 4.6 |
+| AI 编辑 `/edit` | SeedEdit 3.0（默认，涂抹局部时裁切编辑后按掩膜羽化贴回）/ qwen-image-2.1-pro（涂抹局部裁切编辑后按掩膜贴回） |
+| 爆款复刻 `/replicate` | qwen-image-2.1-turbo（默认）/ qwen-image-2.1-pro / qwen-image-3.0 / qwen-image-3.0-pro / 即梦 Seedream 4.6 |
+| 3D 商品 `/model3d` | 腾讯混元生3D `hy-3d-3.1`（GLB，2–8 张多视角） |
 
 ### 环境变量
 
 ```env
-# 腾讯云（MPS + 混元生图 aiart）
+# 腾讯云（MPS + 混元生图 + 混元生3D + COS）
 TENCENT_SECRET_ID=your_secret_id
 TENCENT_SECRET_KEY=your_secret_key
+TENCENT_MPS_REGION=ap-guangzhou
+TENCENT_COS_BUCKET=your_bucket
+TENCENT_COS_REGION=ap-guangzhou
+TENCENT_COS_PUBLIC_URL=
 
-# 阿里云百炼（aitryon，北京地域 Key）
+# 阿里云百炼（qwen-image，北京地域 Key）
 ALIYUN_BAILIAN_API_KEY=your_api_key
+ALIYUN_BAILIAN_BASE_URL=
+
+# 火山引擎（Seedream / SeedEdit）
+VOLCENGINE_ACCESS_KEY=your_access_key
+VOLCENGINE_SECRET_KEY=your_secret_key
+VOLCENGINE_REGION=cn-north-1
+
+# 对象存储提供方：tencent（COS）| aliyun（OSS）
+STORAGE_PROVIDER=tencent
+ALIYUN_OSS_ACCESS_KEY_ID=
+ALIYUN_OSS_ACCESS_KEY_SECRET=
+ALIYUN_OSS_BUCKET=
+ALIYUN_OSS_REGION=oss-cn-hangzhou
+ALIYUN_OSS_PUBLIC_URL=
 ```
 
 ---

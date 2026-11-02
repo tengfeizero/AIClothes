@@ -2,7 +2,7 @@
 
 基于 AI 的电商视觉生产平台：上传参考图与提示词即可生成电商视觉素材，并延伸出数字人模特、爆款复刻与 3D 商品模型能力。
 
-![功能预览](docs/preview.png)
+![首页](docs/screenshots/home.png)
 
 ## 功能矩阵
 
@@ -10,12 +10,22 @@
 
 | 模块 | 路由 | 说明 | 底层能力 |
 |------|------|------|---------|
-| 自由生图 | `/generate` | 上传最多 14 张参考图 + 提示词，AI 自由组合生成 | 阿里云 qwen-image / 即梦 Seedream |
+| 自由生图 | `/generate` | 上传多张参考图（qwen 最多 4 张 / 即梦最多 14 张）+ 提示词，AI 自由组合生成 | 阿里云 qwen-image / 即梦 Seedream |
 | AI 编辑 | `/edit` | 上传单张图并涂抹局部区域（可选），用自然语言描述编辑效果 | 火山引擎 SeedEdit 3.0（裁切局部精修后贴回）/ 阿里云 qwen-image-2.1-pro（局部裁切编辑后贴回） |
 | 素材中心 | `/assets` | 浏览与检索素材、上传套装/单品（上装/下装/连衣裙/配饰/鞋履）、上传模特、导入图库、同步/删除 | — |
 | 3D 商品 | `/model3d` | 上传 2–8 张多视角照片，生成可拖拽的 GLB 模型 | 腾讯混元生3D（`hy-3d-3.1`） |
 | 爆款复刻 | `/replicate` | 上传爆款参考图，复刻其场景与姿态并替换服装 | 阿里云百炼 qwen-image / 火山引擎即梦 Seedream 4.6 |
 | 任务中心 | `/tasks` | 全部异步任务的状态、进度、结果与重试入口 | — |
+
+## 界面预览
+
+| 自由生图 | 精确编辑（涂抹局部） |
+| --- | --- |
+| ![自由生图](docs/screenshots/generate.png) | ![精确编辑](docs/screenshots/edit.png) |
+| **爆款复刻** | **3D 商品** |
+| ![爆款复刻](docs/screenshots/replicate.png) | ![3D 商品](docs/screenshots/model3d.png) |
+| **素材中心** | **首页** |
+| ![素材中心](docs/screenshots/assets.png) | ![首页](docs/screenshots/home.png) |
 
 ## 技术栈
 
@@ -25,8 +35,8 @@
 | 语言 | TypeScript 5.6 | 严格类型，`@/` 别名指向 `src/` |
 | 数据库 | SQLite + better-sqlite3 | 同步 API、零配置、单文件；WAL 模式 |
 | 样式 | Tailwind CSS 3.4 + lucide-react | 原子化样式，图标统一用 lucide |
-| 图片存储 | 腾讯云 COS | 上传图与结果图统一存对象存储，返回公网 URL |
-| 图片处理 | sharp | 服务端裁切/拼图（多件服装合成单图） |
+| 图片存储 | 本地 + 对象存储（腾讯云 COS / 阿里云 OSS） | 用户上传素材先落本地，再同步对象存储提供公网 URL；生成结果只存本地 |
+| 图片处理 | sharp | 服务端缩放/裁切/掩膜羽化/拼图（涂抹局部编辑贴回） |
 | 3D 渲染 | `<model-viewer>`（CDN）+ CSS 3D Transform | GLB 用 model-viewer，三视图用纯 CSS 旋转 |
 | 任务队列 | 进程内轮询 + SQLite 持久化 | 不引入 Redis，单进程内并发调度 |
 
@@ -41,9 +51,12 @@ cp .env.example .env.local   # 按需填入各厂商密钥
 
 # 3. 启动开发服务器
 rm -rf .next && npm run dev   # 首次启动或改过 config 时先清缓存，见「避坑」第 1 条
+# Windows PowerShell 用：Remove-Item -Recurse -Force .next; npm run dev
 ```
 
 打开 <http://localhost:3000>。数据库在首次请求时自动创建于 `data/aiclothes.db`，无需手动迁移。
+
+环境要求：Node.js 18+（推荐 20 LTS）。`better-sqlite3` 与 `sharp` 走预编译包，Node 大版本升级后如报原生模块错误，执行 `npm rebuild better-sqlite3 sharp`。
 
 生产构建：
 
@@ -62,7 +75,15 @@ AIClothes/
 │   ├── default-models/              # 预置模特图（当前为空）
 │   └── uploads/
 │       ├── cache/                   # /api/image-cache 的本地图片缓存
-│       └── garments|models|poses|backgrounds|results/   # 早期本地上传遗留目录
+│       ├── general/                 # 通用素材
+│       ├── garment/                 # 套装素材
+│       ├── item/                    # 单品素材（上装/下装/连衣裙/配饰/鞋履）
+│       ├── model/                   # 模特素材
+│       ├── pose/                    # 姿势素材与编辑掩膜
+│       ├── background/              # 背景素材
+│       ├── results/                 # AI 生成结果（仅本地）
+│       ├── model3d/                 # 生成的 GLB 与预览图（仅本地）
+│       └── garments|models|poses|backgrounds|accessories/  # 早期目录遗留，可清理
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx               # 根布局（顶栏 + 导航）
@@ -77,15 +98,17 @@ AIClothes/
 │   ├── components/
 │   │   ├── layout/header-nav.tsx    # 顶部导航（桌面 + 移动）
 │   │   ├── upload/image-upload.tsx  # 图片上传组件
-│   │   ├── task-status/             # 任务状态与进度
-│   │   ├── viewer/
-│   │   │   ├── multi-view-3d.tsx    # 三视图 CSS 3D 旋转
-│   │   │   └── spin-360.tsx         # 帧序列 360° 预览
+│   │   ├── assets/                  # 素材选择器（素材中心 / 各生成页共用）
+│   │   ├── edit/mask-painter.tsx    # 涂抹画布（生成外接框 + 黑白掩膜）
+│   │   ├── task-status/task-status.tsx  # 任务状态与进度
+│   │   └── viewer/
+│   │       ├── multi-view-3d.tsx    # 三视图 CSS 3D 旋转
+│   │       └── spin-360.tsx         # 帧序列 360° 预览
 │   ├── lib/
 │   │   ├── ai/
 │   │   │   ├── generation-plans.ts  # ★ 生成方案目录（厂商/模型/单价/分辨率）
-│   │   │   ├── tencent.ts           # 腾讯云 MPS（换装，复刻复用）
-│   │   │   ├── hunyuan.ts           # 腾讯混元生图（图生图）
+│   │   │   ├── tencent.ts           # 腾讯云 MPS（遗留换装接口）
+│   │   │   ├── hunyuan.ts           # 腾讯混元生图（遗留图生图）
 │   │   │   ├── tencent3d.ts         # 腾讯混元生3D（异步 GLB）
 │   │   │   ├── volcengine.ts        # 火山引擎（即梦 Seedream / SeedEdit）
 │   │   │   └── aliyun.ts            # 阿里云百炼 qwen-image
@@ -102,7 +125,12 @@ AIClothes/
 │   │   │   ├── model-store.ts       # 模特
 │   │   │   ├── garment-store.ts     # 服装单品
 │   │   │   └── image-generation-store.ts  # 单图生成记录
-│   │   ├── storage/cos.ts           # COS 上传/下载/结果落库
+│   │   ├── storage/
+│   │   │   ├── cos.ts               # 统一存储入口（按 STORAGE_PROVIDER 选 COS/OSS）
+│   │   │   ├── aliyun-oss.ts        # 阿里云 OSS 适配
+│   │   │   ├── local.ts             # 本地落盘（素材副本 + 生成结果）
+│   │   │   ├── assets.ts            # 素材扫描 / 同步 / 删除
+│   │   │   └── material-types.ts    # 素材类型与前端共享常量
 │   │   └── utils/                   # cn / cacheImageUrl / file / id
 │   └── types/index.ts               # 全局类型定义
 ├── next.config.js
@@ -174,7 +202,7 @@ Worker 每 2s 取任务（并发上限 3）→ 置 processing
    ↓
 worker 按 params.method 分发到厂商 → 轮询第三方（3s/次）
    ↓
-下载结果图 → 转存 COS → 写生成记录 → 置 completed / failed
+下载结果图 → 落本地 public/uploads/results（3D 落 model3d/）→ 写生成记录 → 置 completed / failed
    ↓
 前端拿到 completed → 展示结果
 ```
@@ -224,23 +252,31 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 ## API 参考
 
-共 15 个路由。所有路由 `export const dynamic = 'force-dynamic'`。
+共 15 个路由。除 `/api/assets`（声明 `runtime = 'nodejs'`）外，均显式设置 `export const dynamic = 'force-dynamic'`，避免任务与素材状态被缓存。
 
 ### 上传与图片
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/upload` | `multipart/form-data`：`file` + `type`（garment/model/pose/background/results/accessories/shoes/model3d）。校验图片类型与 `MAX_FILE_SIZE`，直传 COS，返回 `{ id, path, url, filename }` |
+| POST | `/api/upload` | `multipart/form-data`：`file` + `type`（general/garment/item/model/pose/background）。校验图片类型与 `MAX_FILE_SIZE`，超过 1920px 等比缩放；素材先落本地再同步对象存储，返回 `{ id, path, url, publicPath, filename }` |
 | GET | `/api/image-cache?url=` | 图片本地缓存代理，URL 的 MD5 为文件名，命中直接返回并带 `max-age=86400`；非 http(s) 直接 302 |
+
+### 素材中心
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/assets?type=` | 扫描本地素材目录，返回文件名、大小、时间、分类、关键词与对象存储同步状态 |
+| POST | `/api/assets` | `{ type, filename }` 同步到对象存储；`{ action: 'metadata', ... }` 写入素材元数据（标题/分类/来源/标签） |
+| DELETE | `/api/assets?type=&filename=` | 删除素材：本地文件 + 对象存储副本（`results` 仅删本地） |
 
 ### 生成任务（均返回 `{ taskId }`）
 
 | 方法 | 路径 | 入参要点 |
 |------|------|---------|
-| POST | `/api/replicate` | `referenceImagePath`（必填）+ 可选 `modelImagePath` `poseImagePath` `garmentImagePath` `scenePrompt` `planId` `outputResolution`；固定走阿里云 qwen-image，选填图按 模特→姿势→服装 顺序追加，指令按实际选填项动态生成 |
+| POST | `/api/replicate` | `referenceImagePath`（必填）+ 可选 `modelImagePath` `poseImagePath` `garmentImagePath` `scenePrompt` `planId` `outputResolution`；按 `planId` 路由阿里云 qwen-image（4 档）或火山引擎即梦 Seedream 4.6，选填图按 模特→姿势→服装 顺序追加，指令按实际选填项动态生成 |
 | POST | `/api/generate` | `imagePaths[]` + `prompt`，可选 `planId` `outputResolution`（`WxH` 或 `original`），按 `plan.maxImages` 截断 |
-| POST | `/api/edit` | `garmentImagePath` + `prompt`，可选 `planId` |
-| POST | `/api/3d/generate` | `imageUrls[]`（2–8 张），可选 `resultFormat`（默认 GLB）`enablePbr` `planId` |
+| POST | `/api/edit` | `garmentImagePath` + `prompt`，可选 `planId` `region` `maskDataUrl`；`region` 为归一化涂抹外接框，`maskDataUrl` 为同尺寸黑白 PNG，两者缺一时按整图编辑 |
+| POST | `/api/3d/generate` | `imageUrls[]`（前端要求 2–8 张），可选 `resultFormat`（默认 GLB）`enablePbr` `planId` |
 
 **分辨率处理**：前端传 `"1080x1440"` 时，即梦按 `w*h` 换算像素总数并归类到 1K/2K/4K，
 阿里云按 `"W*H"` 字符串透传；传 `"original"` 则标记为「原图」不做限制。
@@ -299,7 +335,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 | 页面 | 交互要点 |
 |------|---------|
-| `/` 首页 | 4 个功能卡片 + 三步使用说明 |
+| `/` 首页 | 3 个功能卡片（自由生图 / AI 编辑 / 爆款复刻）+ 三步使用说明 |
 | `/generate` 自由生图 | 多图上传位（按方案 `maxImages` 限制），提示词支持「图1/图2…」指代上传顺序，可选输出分辨率 |
 | `/edit` AI 编辑 | 单图 + 提示词，图片上涂抹局部区域（可调画笔、撤销、清除），内置快捷指令（QUICK_PROMPTS）一键填充 |
 | `/assets` 素材中心 | 类型标签 + 分类/关键词检索；上传模特（自动设为默认、可切换默认、删除）；图库素材同步与删除 |
@@ -315,12 +351,20 @@ TENCENT_SECRET_ID=
 TENCENT_SECRET_KEY=
 TENCENT_MPS_REGION=ap-guangzhou
 
-# 腾讯云 COS（必填，上传图与结果图均存于此）
+# ── 对象存储（二选一，配一组即可）──
+STORAGE_PROVIDER=tencent         # tencent（COS）| aliyun（OSS），默认 tencent
+# 腾讯云 COS
 TENCENT_COS_BUCKET=
 TENCENT_COS_REGION=ap-guangzhou
 TENCENT_COS_PUBLIC_URL=          # 可选，自定义 CDN 域名；留空用 https://{bucket}.cos.{region}.myqcloud.com
+# 阿里云 OSS
+ALIYUN_OSS_ACCESS_KEY_ID=
+ALIYUN_OSS_ACCESS_KEY_SECRET=
+ALIYUN_OSS_BUCKET=
+ALIYUN_OSS_REGION=oss-cn-hangzhou
+ALIYUN_OSS_PUBLIC_URL=           # 可选，留空用 https://{bucket}.{region}.aliyuncs.com
 
-# ── 火山引擎（即梦 Seedream / SeedEdit）──
+# ── 火山引擎（即梦 Seedream 4.6 / SeedEdit 3.0）──
 VOLCENGINE_ACCESS_KEY=
 VOLCENGINE_SECRET_KEY=
 VOLCENGINE_REGION=cn-north-1
@@ -341,21 +385,20 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ## 技术决策与避坑
 
-1. **启动前先清 `.next`**：`npm run dev` 会递归清理 `.next` 缓存，在带删除保护的环境（如沙箱/安全垫片）下可能报 `SAFE_DELETE_BULK_CONFIRM_REQUIRED` 并直接退出。先 `rm -rf .next` 再启动即可。
+1. **启动前先清 `.next`**：`next dev` 在部分环境下会复用损坏的编译缓存（改过 `next.config.js` / `tailwind.config.ts` 后尤其常见）。先删 `.next` 再启动；带删除保护的环境（如沙箱/安全垫片）可能报 `SAFE_DELETE_BULK_CONFIRM_REQUIRED`，需要手动删除该目录。
 2. **数据库惰性初始化**：不在模块顶层执行 DDL，首次 `getDb()` 时才建表，避免构建期副作用与热重载重复执行。
 3. **better-sqlite3 原生模块**：使用包内 `prebuilds/win32-x64.node` 等预编译产物，跨版本 Node 升级后如报绑定错误执行 `npm rebuild better-sqlite3`。
-4. **Server / Client 边界**：除首页（纯静态 Server Component）外，其余 7 个页面均为 `'use client'`，数据统一通过 `/api/*` 获取；不要在 Client Component 里直接 import `lib/db`。
+4. **Server / Client 边界**：除首页（纯静态 Server Component）外，其余 6 个页面均为 `'use client'`，数据统一通过 `/api/*` 获取；不要在 Client Component 里直接 import `lib/db`。
 5. **JSON 字段**：SQLite 无数组类型，统一用 `TEXT` 存 JSON，经 `parseJson`/`stringifyJson` 转换。
-6. **图片必须公网可访问**：厂商侧是拉取 URL 而非接收文件流，所以上传即直传 COS；`resolveUrl()` 负责把历史遗留的 `/uploads/xxx` 相对路径补成 COS 公网地址。
-7. **结果图不落本地**：生成结果下载后立刻转存 COS，避免容器重启丢图；`public/uploads` 仅存放 `image-cache` 的缓存。
+6. **素材必须公网可访问**：厂商侧是拉取 URL 而非接收文件流，所以用户上传的素材会先落本地、再同步到 COS/OSS；`resolveUrl()` 负责把历史遗留的 `/uploads/xxx` 相对路径补成对象存储公网地址。
+7. **素材与结果分开存储**：生成结果只落本地 `public/uploads/results`（3D 落 `model3d/`），不回传对象存储；`public/uploads` 同时保存 `image-cache` 缓存，容器部署需挂载持久卷。
 8. **计费安全**：多步任务恢复时优先复用 `provider_task_id` 续轮询，绝不对已提交的视角重新下单。
 9. **成本可追溯**：每次生成都把 `provider/model/price/calls` 写入生成记录表，任务失败也会留痕，便于对账。
 
 ## 已知问题与待办
 
-- `src/lib/storage/local.ts` 已无引用（上传全走 COS），可删除。
-- `/api/garment` 引入了 `deleteGarment` 但未定义 `DELETE` handler，该导入为死代码；如需删单品应补上路由。
-- 首页 `src/app/page.tsx` 只有 4 个功能卡片，缺少导航里已有的「3D商品 `/model3d`」。
+- 首页 `src/app/page.tsx` 只有 3 个功能卡片，缺少导航里已有的「3D商品 `/model3d`」与「素材中心 `/assets`」入口。
 - `public/default-models/` 为空目录，预置模特库能力实际未启用。
+- `public/uploads` 下保留 `garments|models|poses|backgrounds|accessories` 等早期目录，与新目录并存，可在确认无引用后清理。
 - 任务队列为进程内实现，仅适合单实例部署；多实例需改为外部队列（Redis/DB 轮询锁）。
 - 无鉴权与用户体系，所有数据全局共享，上线前需补充登录与数据隔离。
